@@ -140,6 +140,46 @@ where
         }
     }
 
+    pub fn entry(&self) -> A {
+        self.e_entry
+    }
+
+    pub fn phstart(&self) -> O {
+        self.e_phoff
+    }
+
+    pub fn shstart(&self) -> O {
+        self.e_shoff
+    }
+
+    pub fn nheaders(&self) -> H {
+        self.e_phnum
+    }
+
+    pub fn flags(&self) -> W {
+        self.e_flags
+    }
+
+    pub fn header_size(&self) -> H {
+        self.e_ehsize
+    }
+
+    pub fn section_size(&self) -> H {
+        self.e_shentsize
+    }
+
+    pub fn nsection_headers(&self) -> H {
+        self.e_shnum
+    }
+
+    pub fn program_headers_size(&self) -> H {
+        self.e_phentsize
+    }
+
+    pub fn table_index(&self) -> H {
+        self.e_shstrndx
+    }
+
     pub fn machine(&self) -> H {
         self.e_machine
     }
@@ -167,20 +207,6 @@ where
             i => OsABI::Unknown(i),
         }
     }
-    /*
-        pub enum OsABI {
-        None,
-        SysV,
-        HPUX,
-        NetBSD,
-        Linux,
-        Solaris,
-        IRIX,
-        FreeBSD,
-        Tru64,
-        ARM,
-        Standalone,
-    } */
 
     pub fn ftype(&self) -> Option<ObjectType> {
         let e_type = match self.e_type.to_u32() {
@@ -222,19 +248,3 @@ impl Display for OsABI {
         })
     }
 }
-
-/*
-pub enum OsABI {
-    None,
-    SysV,
-    HPUX,
-    NetBSD,
-    Linux,
-    Solaris,
-    IRIX,
-    FreeBSD,
-    Tru64,
-    ARM,
-    Standalone,
-}
- */
