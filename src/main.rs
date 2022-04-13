@@ -1,4 +1,10 @@
-use std::{mem::size_of, path::Path};
+#![feature(int_log)]
+
+use std::{
+    mem::size_of,
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
 use clap::Parser;
 
@@ -6,13 +12,22 @@ mod elf;
 use elf::ElfHdr64;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
-use crate::elf::{hdr::Endian, ELFVER};
+use crate::elf::{hdr::Endian, ElfShdr64, ELFVER};
 
 macro_rules! set_color {
     ($stdout:expr, $color:path) => {
         $stdout
             .set_color(ColorSpec::new().set_fg(Some($color)))
             .unwrap();
+    };
+}
+
+macro_rules! print_color {
+    ($stdout:expr, $color:path, $fmt:expr, $($ctx:tt)*) => {
+        $stdout
+            .set_color(ColorSpec::new().set_fg(Some($color)))
+            .unwrap();
+        print!($fmt, $($ctx)*);
     };
 }
 
@@ -44,12 +59,17 @@ struct Args {
     all: bool,
 
     /// Display the program header
-    #[clap(short = 'l', long = "program-headers")]
+    #[clap(short = 'h', long = "program-headers")]
     show_headers: bool,
+
+    /// Display the section headers
+    #[clap(short = 'S', long = "section-headers", alias = "sections")]
+    show_sections: bool,
 }
 
 fn main() {
     let args = Args::parse();
+    let mut should_pad = false;
     let mut stdout = StandardStream::stdout(ColorChoice::Always);
 
     for f in args.files {
@@ -219,11 +239,47 @@ fn main() {
                 36
             );
 
-            // set_color!(stdout, Color::Green);
-            // print!("Class");
-            // set_color!(stdout, Color::White);
+            should_pad = true;
+        }
 
-            // println!(":{:>pad}", "A");
+        if args.show_sections {
+            if should_pad {
+                println!("");
+            }
+            print_color!(stdout, Color::Yellow, "{}\n  ", "Section Headers");
+
+            print_color!(stdout, Color::Blue, "{}", "[");
+            print_color!(stdout, Color::White, "{}", "Nr");
+            print_color!(stdout, Color::Blue, "{}", "]");
+
+            print_color!(stdout, Color::Green, " {:16}", "Name");
+            print_color!(stdout, Color::Green, " {:16}", "Type");
+            print_color!(stdout, Color::Green, " {:16}", "Address");
+            print_color!(stdout, Color::Green, " {:16}\n      ", "Offset");
+
+            print_color!(stdout, Color::Green, " {:16}", "Size");
+            print_color!(stdout, Color::Green, " {:16}", "EntSize");
+            print_color!(stdout, Color::Green, " {:16}", "Flags  Link  Info");
+            print_color!(stdout, Color::Green, " {:16}", "Align");
+
+            let shdrs = ElfShdr64::read::<u16>(&PathBuf::from_str(f.as_str()).unwrap()).unwrap();
+
+            let max_pad = shdrs.len().log10() as usize + 1;
+            for (i, shdr) in shdrs.iter().enumerate() {
+                print_color!(stdout, Color::Blue, "{}", "\n  [");
+                print_color!(
+                    stdout,
+                    Color::White,
+                    "{i:max_pad$}",
+                    i = i,
+                    max_pad = max_pad
+                );
+
+                print_color!(stdout, Color::Blue, "{}", "] ");
+                set_color!(stdout, Color::White);
+                print!("{}", 00000);
+            }
+            println!("");
         }
     }
 

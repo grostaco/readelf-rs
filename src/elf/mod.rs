@@ -1,9 +1,10 @@
 pub mod hdr;
 pub mod phdr;
+pub mod shdr;
 
 pub use hdr::ElfHdr;
 pub use phdr::ElfPhdr;
-
+pub use shdr::ElfShdr;
 // Constants taken directly from linux/elf.h
 
 pub const EI_NINDENT: usize = 16;
@@ -34,5 +35,8 @@ pub const ELFVER: u8 = 1;
 
 pub type ElfHdr32 = hdr::ElfHdr<u16, u32, u32, u32>;
 pub type ElfPhdr32 = phdr::ElfPhdr<u32, u32, u32>;
+pub type ElfShdr32 = shdr::ElfShdr<u32, u32, u32>;
+
 pub type ElfHdr64 = hdr::ElfHdr<u16, u32, u64, u64>;
-pub type ElfPhdr64 = phdr::ElfPhdr<u64, u64, u64>;
+pub type ElfPhdr64 = phdr::ElfPhdr<u32, u64, u64>;
+pub type ElfShdr64 = shdr::ElfShdr<u32, u64, u64>;
