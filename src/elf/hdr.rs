@@ -143,6 +143,24 @@ impl ElfHdr {
         }
     }
 
+    pub fn read_file<R: Read>(file: &mut R) -> Result<Self, std::io::Error> {
+        unsafe {
+            let mut buf = MaybeUninit::<Elf64Hdr>::uninit();
+            file.read(slice::from_raw_parts_mut(
+                transmute(buf.as_mut_ptr()),
+                size_of::<Self>(),
+            ))?;
+
+            let hdr = buf.as_ptr() as *const Elf32Hdr;
+
+            Ok(match (*hdr).e_ident[EI_CLASS] {
+                1 => Self::upcast_elf32(&*hdr),
+                2 => Self::upcast_elf64(&*transmute::<_, *const Elf64Hdr>(hdr)),
+                _ => panic!("Unrecognized elf class"),
+            })
+        }
+    }
+
     pub fn ident(&self) -> &[u8] {
         &self.e_ident
     }

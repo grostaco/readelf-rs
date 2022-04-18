@@ -1,6 +1,6 @@
 #![feature(int_log)]
 
-use std::path::Path;
+use std::{fs::File, path::Path};
 
 use clap::Parser;
 
@@ -10,7 +10,7 @@ use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 use crate::elf::{
     hdr::{ElfClass, Endian},
-    shdr::{ElfShdr, SectionFlag},
+    shdr::SectionFlag,
     ElfHdr, ELFVER,
 };
 
@@ -72,7 +72,13 @@ fn main() {
     let mut should_pad = false;
     let mut stdout = StandardStream::stdout(ColorChoice::Always);
 
+    let mut file = File::open("../ComputerSystems/bin/out").unwrap();
+    let hdr = ElfHdr::read_file(&mut file).unwrap();
+    println!("{:#?}", hdr);
+
     for f in args.files {
+        let elf = elf::core::File::new("../ComputerSystems/bin/out").unwrap();
+
         if args.show_headers {
             let hdr = ElfHdr::read(Path::new("../ComputerSystems/bin/out")).unwrap();
 
@@ -262,12 +268,9 @@ fn main() {
             print_color!(stdout, Color::Green, " {:18}", "Flags  Link  Info");
             print_color!(stdout, Color::Green, " {:18}", "Align");
 
-            let it_shdr = ElfShdr::iter(&f).unwrap();
-            let table = ElfShdr::read_string_table(&f).unwrap();
+            let max_pad = elf.section_headers().len().log10() as usize + 1;
 
-            let max_pad = it_shdr.size_hint().0.log10() as usize + 1;
-
-            for (i, shdr) in it_shdr.enumerate() {
+            for (i, shdr) in elf.section_headers().iter().enumerate() {
                 print_color!(stdout, Color::Blue, "{}", "\n  [");
                 print_color!(
                     stdout,
@@ -281,12 +284,10 @@ fn main() {
                 set_color!(stdout, Color::White);
                 print!(
                     "{:18}",
-                    table
-                        .iter()
-                        .skip(shdr.name() as usize)
-                        .take(16 + 1)
-                        .take_while(|&&c| c != 0)
-                        .map(|c| *c as char)
+                    &elf.string_lookup(shdr.name() as usize)
+                        .unwrap()
+                        .chars()
+                        .take(16)
                         .collect::<String>()
                 );
 

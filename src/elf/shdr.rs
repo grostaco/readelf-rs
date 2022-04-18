@@ -2,9 +2,9 @@ use std::{
     fmt::Debug,
     fs::{File, OpenOptions},
     io::{self, Read, Seek, SeekFrom},
-    mem::{transmute, MaybeUninit},
+    mem::{self, transmute, MaybeUninit},
     path::Path,
-    slice,
+    ptr, slice,
 };
 
 use num::{FromPrimitive, ToPrimitive};
@@ -136,6 +136,41 @@ impl ElfShdr {
         file.seek(SeekFrom::Start(shdr.offset()))?;
         let mut buf = vec![0; shdr.size() as usize];
 
+        file.read(&mut buf)?;
+
+        Ok(buf)
+    }
+
+    pub fn get_string_table<R: Read + Seek>(
+        file: &mut R,
+        hdr: &ElfHdr,
+    ) -> Result<Vec<u8>, std::io::Error> {
+        let index = (hdr.e_shentsize as u64 * hdr.e_shstrndx as u64) + hdr.e_shoff;
+        let mut buf = MaybeUninit::<Elf64Shdr>::uninit();
+
+        file.seek(SeekFrom::Start(index))?;
+
+        let shdr: ElfShdr = unsafe {
+            file.read(slice::from_raw_parts_mut(
+                transmute(&mut buf),
+                mem::size_of::<Elf64Shdr>(),
+            ))?;
+            match hdr.class().unwrap() {
+                ElfClass::None | ElfClass::ElfClass32 => {
+                    let mut elf32 = MaybeUninit::<Elf32Shdr>::uninit();
+                    ptr::copy_nonoverlapping(
+                        elf32.as_mut_ptr() as *mut u8,
+                        buf.as_mut_ptr() as *mut u8,
+                        mem::size_of::<Elf32Shdr>(),
+                    );
+                    elf32.assume_init().into()
+                }
+                ElfClass::ElfClass64 => buf.assume_init().into(),
+            }
+        };
+
+        let mut buf = vec![0; shdr.size() as usize];
+        file.seek(SeekFrom::Start(shdr.offset()))?;
         file.read(&mut buf)?;
 
         Ok(buf)
