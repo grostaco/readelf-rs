@@ -4,6 +4,7 @@ use std::path::Path;
 
 use clap::Parser;
 
+#[allow(dead_code)]
 mod elf;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 

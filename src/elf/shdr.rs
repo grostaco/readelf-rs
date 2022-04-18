@@ -2,13 +2,12 @@ use std::{
     fmt::Debug,
     fs::{File, OpenOptions},
     io::{self, Read, Seek, SeekFrom},
-    marker::PhantomData,
-    mem::{transmute, transmute_copy, MaybeUninit},
-    path::{Path, PathBuf},
+    mem::{transmute, MaybeUninit},
+    path::Path,
     slice,
 };
 
-use num::{FromPrimitive, PrimInt, ToPrimitive};
+use num::{FromPrimitive, ToPrimitive};
 use num_derive::FromPrimitive;
 
 use super::{

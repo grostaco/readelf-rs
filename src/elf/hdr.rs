@@ -1,21 +1,21 @@
 use std::{
     fmt::Display,
     fs::OpenOptions,
-    io::{Read, Seek, SeekFrom},
+    io::Read,
     mem::MaybeUninit,
     mem::{size_of, transmute},
     path::Path,
-    ptr, slice,
+    slice,
 };
 
-use num::{PrimInt, ToPrimitive};
+use num::ToPrimitive;
 use num_derive::FromPrimitive;
 use num_traits::cast::FromPrimitive;
 
 use super::{
-    shdr::SectionType, Elf32Addr, Elf32Half, Elf32Off, Elf32Word, Elf64Addr, Elf64Half, Elf64Off,
-    Elf64Word, EI_ABIVERSION, EI_CLASS, EI_DATA, EI_MAG0, EI_MAG1, EI_MAG2, EI_MAG3, EI_NINDENT,
-    EI_OSABI, EI_VERSION, ELFMAG,
+    Elf32Addr, Elf32Half, Elf32Off, Elf32Word, Elf64Addr, Elf64Half, Elf64Off, Elf64Word,
+    EI_ABIVERSION, EI_CLASS, EI_DATA, EI_MAG0, EI_MAG1, EI_MAG2, EI_MAG3, EI_NINDENT, EI_OSABI,
+    EI_VERSION,
 };
 
 #[derive(Debug)]
