@@ -34,21 +34,6 @@ pub struct ElfShdrIter {
     remaining: usize,
     is_elf64: bool,
 }
-
-// #[repr(C)]
-// pub struct ElfNShdr<XWord, Word, Offset, Address> {
-//     name: Word,
-//     section_type: Word,
-//     flags: XWord,
-//     addr: Address,
-//     offset: Offset,
-//     size: XWord,
-//     link: Word,
-//     info: Word,
-//     addralign: XWord,
-//     entsize: XWord,
-// }
-
 #[repr(C)]
 pub struct Elf32Shdr {
     name: Elf32Word,
