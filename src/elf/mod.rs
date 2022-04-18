@@ -1,6 +1,8 @@
+pub mod core;
 pub mod hdr;
 pub mod phdr;
 pub mod shdr;
+pub mod sym;
 
 pub use hdr::ElfHdr;
 pub use phdr::ElfPhdr;
