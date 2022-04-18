@@ -88,8 +88,8 @@ impl ElfShdr {
         SectionType::from_u32(self.section_type)
     }
 
-    pub fn flags(&self) -> Option<SectionFlag> {
-        SectionFlag::from_u64(self.flags)
+    pub fn flags(&self) -> u64 {
+        self.flags
     }
 
     pub fn addr(&self) -> Elf64Addr {
@@ -283,7 +283,7 @@ impl Iterator for ElfShdrIter {
     }
 }
 
-#[derive(FromPrimitive)]
+#[derive(Debug, FromPrimitive)]
 pub enum SectionType {
     Null = 0x0,
     ProgBits = 0x1,
@@ -311,12 +311,18 @@ pub enum SectionType {
     VerSym = 0x6FFFFFFF,
 }
 
-#[derive(FromPrimitive)]
 pub enum SectionFlag {
-    Write = 0x1,
-    Alloc = 0x2,
-    ExecInstr = 0x4,
-    RelaLivePatch = 0x100000,
-    RoAfterInit = 0x200000,
-    MaskProc = 0xf00000,
+    Write = 1 << 0,
+    Alloc = 1 << 1,
+    ExecInstr = 1 << 2,
+    Merge = 1 << 4,
+    Strings = 1 << 5,
+    InfoLink = 1 << 6,
+    LinkOrder = 1 << 7,
+    OsNonConforming = 1 << 8,
+    Group = 1 << 9,
+    Tls = 1 << 10,
+    Exclude = 0x80000000,
+    Compressed = 1 << 11,
+    GnuMbind = 0x01000000,
 }

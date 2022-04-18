@@ -1,22 +1,15 @@
 #![feature(int_log)]
 
-use std::{
-    fs::OpenOptions,
-    io::{BufRead, BufReader, Read, Seek, SeekFrom},
-    path::{Path, PathBuf},
-    str::FromStr,
-};
+use std::path::Path;
 
 use clap::Parser;
 
 mod elf;
-
-use num::ToPrimitive;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 use crate::elf::{
     hdr::{ElfClass, Endian},
-    shdr::{ElfShdr, SectionType},
+    shdr::{ElfShdr, SectionFlag},
     ElfHdr, ELFVER,
 };
 
@@ -259,12 +252,12 @@ fn main() {
             print_color!(stdout, Color::Blue, "{}", "]");
 
             print_color!(stdout, Color::Green, " {:18}", "Name");
-            print_color!(stdout, Color::Green, " {:18}", "Type");
-            print_color!(stdout, Color::Green, " {:18}", "Address");
-            print_color!(stdout, Color::Green, " {:18}\n      ", "Offset");
+            print_color!(stdout, Color::Green, " {:17}", "Type");
+            print_color!(stdout, Color::Green, " {:17}", "Address");
+            print_color!(stdout, Color::Green, " {:16}\n      ", "Offset");
 
             print_color!(stdout, Color::Green, " {:18}", "Size");
-            print_color!(stdout, Color::Green, " {:18}", "EntSize");
+            print_color!(stdout, Color::Green, " {:17}", "EntSize");
             print_color!(stdout, Color::Green, " {:18}", "Flags  Link  Info");
             print_color!(stdout, Color::Green, " {:18}", "Align");
 
@@ -296,17 +289,52 @@ fn main() {
                         .collect::<String>()
                 );
 
-                // print!(
-                //     " {:18}",
-                //     match shdr.sh_type {
-                //         SectionType::NULL => "NULL",
-                //         _ => "?",
-                //     }
-                // );
+                print!(
+                    " {:18}",
+                    format!("{:?}", shdr.section_type().unwrap()).to_uppercase()
+                );
+
+                print!("{:016x}", shdr.addr());
+                print!("  {:08x}\n", shdr.offset());
+                print!(
+                    "{empt:pad$}{sz:016x}",
+                    empt = "",
+                    sz = shdr.size(),
+                    pad = 3 + 4
+                );
+                print!("   {:017x}", shdr.entsize());
+
+                let mut flags_buf = String::with_capacity(14);
+                let mut sh_flags = shdr.flags() as i64;
+                while sh_flags != 0 {
+                    let flag = sh_flags & -sh_flags;
+                    sh_flags = sh_flags & !flag;
+                    let cflag = match flag {
+                        flag if flag == SectionFlag::Write as i64 => 'W',
+                        flag if flag == SectionFlag::Alloc as i64 => 'A',
+                        flag if flag == SectionFlag::ExecInstr as i64 => 'X',
+                        flag if flag == SectionFlag::Merge as i64 => 'M',
+                        flag if flag == SectionFlag::Strings as i64 => 'S',
+                        flag if flag == SectionFlag::InfoLink as i64 => 'I',
+                        flag if flag == SectionFlag::LinkOrder as i64 => 'L',
+                        flag if flag == SectionFlag::OsNonConforming as i64 => 'O',
+                        flag if flag == SectionFlag::Group as i64 => 'G',
+                        flag if flag == SectionFlag::Tls as i64 => 'T',
+                        flag if flag == SectionFlag::Exclude as i64 => 'E',
+                        flag if flag == SectionFlag::Compressed as i64 => 'C',
+                        flag if flag == SectionFlag::GnuMbind as i64 => 'D',
+                        _ => '?',
+                    };
+                    flags_buf.push(cflag);
+                }
+
+                print!(" {:^8}", flags_buf);
+                print!("{:>3}", shdr.link());
+                print!("{:>6}", shdr.info());
+                print!("{:>6}", shdr.addralign());
             }
+
             println!("");
         }
     }
-
-    //println!("{:#?}", hdr);
 }
