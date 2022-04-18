@@ -1,41 +1,77 @@
 use std::{
     fmt::Display,
     fs::OpenOptions,
-    io::Read,
+    io::{Read, Seek, SeekFrom},
     mem::MaybeUninit,
     mem::{size_of, transmute},
     path::Path,
     ptr, slice,
 };
 
-use num::PrimInt;
+use num::{PrimInt, ToPrimitive};
+use num_derive::FromPrimitive;
+use num_traits::cast::FromPrimitive;
 
 use super::{
-    EI_ABIVERSION, EI_CLASS, EI_DATA, EI_MAG0, EI_MAG1, EI_MAG2, EI_MAG3, EI_NINDENT, EI_OSABI,
-    EI_VERSION, ELFMAG,
+    shdr::SectionType, Elf32Addr, Elf32Half, Elf32Off, Elf32Word, Elf64Addr, Elf64Half, Elf64Off,
+    Elf64Word, EI_ABIVERSION, EI_CLASS, EI_DATA, EI_MAG0, EI_MAG1, EI_MAG2, EI_MAG3, EI_NINDENT,
+    EI_OSABI, EI_VERSION, ELFMAG,
 };
 
-macro_rules! get_or_prop {
-    () => {};
+#[derive(Debug)]
+pub struct ElfHdr {
+    pub e_ident: [u8; EI_NINDENT],
+    pub e_type: Elf64Half,
+    pub e_machine: Elf64Half,
+    pub e_version: Elf64Word,
+    pub e_entry: Elf64Addr,
+    pub e_phoff: Elf64Off,
+    pub e_shoff: Elf64Off,
+    pub e_flags: Elf64Word,
+    pub e_ehsize: Elf64Half,
+    pub e_phentsize: Elf64Half,
+    pub e_phnum: Elf64Half,
+    pub e_shentsize: Elf64Half,
+    pub e_shnum: Elf64Half,
+    pub e_shstrndx: Elf64Half,
 }
 
-#[derive(Debug)]
 #[repr(C)]
-pub struct ElfHdr<Half, Word, Offset, Addr> {
-    e_ident: [u8; EI_NINDENT],
-    e_type: Half,
-    e_machine: Half,
-    e_version: Word,
-    e_entry: Addr,
-    e_phoff: Offset,
-    e_shoff: Offset,
-    e_flags: Word,
-    e_ehsize: Half,
-    e_phentsize: Half,
-    e_phnum: Half,
-    e_shentsize: Half,
-    e_shnum: Half,
-    e_shstrndx: Half,
+#[derive(Debug)]
+pub struct Elf32Hdr {
+    pub e_ident: [u8; EI_NINDENT],
+    pub e_type: Elf32Half,
+    pub e_machine: Elf32Half,
+    pub e_version: Elf32Word,
+    pub e_entry: Elf32Addr,
+    pub e_phoff: Elf32Off,
+    pub e_shoff: Elf32Off,
+    pub e_flags: Elf32Word,
+    pub e_ehsize: Elf32Half,
+    pub e_phentsize: Elf32Half,
+    pub e_phnum: Elf32Half,
+    pub e_shentsize: Elf32Half,
+    pub e_shnum: Elf32Half,
+    pub e_shstrndx: Elf32Half,
+}
+
+#[repr(C)]
+#[derive(Debug)]
+pub struct Elf64Hdr {
+    pub e_ident: [u8; EI_NINDENT],
+    pub e_type: Elf64Half,
+    pub e_machine: Elf64Half,
+    pub e_version: Elf64Word,
+    pub e_entry: Elf64Addr,
+    pub e_phoff: Elf64Off,
+    pub e_shoff: Elf64Off,
+    pub e_flags: Elf64Word,
+    pub e_ehsize: Elf64Half,
+    pub e_phentsize: Elf64Half,
+    pub e_phnum: Elf64Half,
+    pub e_shentsize: Elf64Half,
+    pub e_shnum: Elf64Half,
+    pub e_shstrndx: Elf64Half,
 }
 
 pub enum OsABI {
@@ -67,32 +103,43 @@ pub enum ObjectType {
     HIPROC,
 }
 
+#[derive(FromPrimitive)]
+pub enum ElfClass {
+    None,
+    ElfClass32,
+    ElfClass64,
+}
 #[derive(Debug)]
 pub enum Endian {
     Little,
     Big,
 }
 
-impl<H, W, O, A> ElfHdr<H, W, O, A>
-where
-    H: PrimInt,
-    W: PrimInt,
-    O: PrimInt,
-    A: PrimInt,
-{
-    pub fn read(path: &Path) -> Result<Self, std::io::Error> {
+impl ElfHdr {
+    pub fn read<P: AsRef<Path>>(path: P) -> Result<Self, std::io::Error> {
         unsafe {
-            let mut buf = MaybeUninit::<Self>::uninit();
-            OpenOptions::new()
-                .read(true)
-                .open(path)
-                .unwrap()
-                .read_exact(slice::from_raw_parts_mut(
-                    transmute(buf.as_mut_ptr()),
-                    size_of::<Self>(),
-                ))?;
+            let mut buf = MaybeUninit::<Elf32Hdr>::uninit();
+            let mut file = OpenOptions::new().read(true).open(&path).unwrap();
+            file.read_exact(slice::from_raw_parts_mut(
+                transmute(buf.as_mut_ptr()),
+                size_of::<Self>(),
+            ))?;
 
-            Ok(buf.assume_init())
+            let hdr = buf.assume_init();
+            Ok(match hdr.e_ident[EI_CLASS] {
+                1 => Self::upcast_elf32(&hdr),
+                2 => {
+                    let mut buf = MaybeUninit::<Elf64Hdr>::uninit();
+                    let mut file = OpenOptions::new().read(true).open(&path).unwrap();
+
+                    file.read_exact(slice::from_raw_parts_mut(
+                        transmute(buf.as_mut_ptr()),
+                        size_of::<Elf64Hdr>(),
+                    ))?;
+                    Self::upcast_elf64(&buf.assume_init())
+                }
+                _ => panic!("Unrecognized elf class"),
+            })
         }
     }
 
@@ -128,8 +175,8 @@ where
         x == 0x7f454c46
     }
 
-    pub fn class(&self) -> u8 {
-        self.e_ident[EI_CLASS]
+    pub fn class(&self) -> Option<ElfClass> {
+        ElfClass::from_u8(self.e_ident[EI_CLASS])
     }
 
     pub fn endian(&self) -> Option<Endian> {
@@ -140,47 +187,47 @@ where
         }
     }
 
-    pub fn entry(&self) -> A {
+    pub fn entry(&self) -> Elf64Addr {
         self.e_entry
     }
 
-    pub fn phstart(&self) -> O {
+    pub fn phstart(&self) -> Elf64Off {
         self.e_phoff
     }
 
-    pub fn shstart(&self) -> O {
+    pub fn shstart(&self) -> Elf64Off {
         self.e_shoff
     }
 
-    pub fn nheaders(&self) -> H {
+    pub fn nheaders(&self) -> Elf64Half {
         self.e_phnum
     }
 
-    pub fn flags(&self) -> W {
+    pub fn flags(&self) -> Elf64Word {
         self.e_flags
     }
 
-    pub fn header_size(&self) -> H {
+    pub fn header_size(&self) -> Elf64Half {
         self.e_ehsize
     }
 
-    pub fn section_size(&self) -> H {
+    pub fn section_size(&self) -> Elf64Half {
         self.e_shentsize
     }
 
-    pub fn nsection_headers(&self) -> H {
+    pub fn nsection_headers(&self) -> Elf64Half {
         self.e_shnum
     }
 
-    pub fn program_headers_size(&self) -> H {
+    pub fn program_headers_size(&self) -> Elf64Half {
         self.e_phentsize
     }
 
-    pub fn table_index(&self) -> H {
+    pub fn table_index(&self) -> Elf64Half {
         self.e_shstrndx
     }
 
-    pub fn machine(&self) -> H {
+    pub fn machine(&self) -> Elf64Half {
         self.e_machine
     }
 
@@ -226,6 +273,52 @@ where
             0xFFFF => Some(ObjectType::HIPROC),
             _ => None,
         }
+    }
+
+    pub fn upcast_elf32(hdr: &Elf32Hdr) -> Self {
+        Self {
+            e_ident: hdr.e_ident,
+            e_type: hdr.e_type,
+            e_machine: hdr.e_machine,
+            e_version: hdr.e_version,
+            e_entry: hdr.e_entry.to_u64().unwrap(),
+            e_phoff: hdr.e_phoff.to_u64().unwrap(),
+            e_shoff: hdr.e_shoff.to_u64().unwrap(),
+            e_flags: hdr.e_flags,
+            e_ehsize: hdr.e_ehsize,
+            e_phentsize: hdr.e_phentsize,
+            e_phnum: hdr.e_phnum,
+            e_shentsize: hdr.e_shentsize,
+            e_shnum: hdr.e_shnum,
+            e_shstrndx: hdr.e_shstrndx,
+        }
+    }
+
+    pub fn upcast_elf64(hdr: &Elf64Hdr) -> Self {
+        Self {
+            e_ident: hdr.e_ident,
+            e_type: hdr.e_type,
+            e_machine: hdr.e_machine,
+            e_version: hdr.e_version,
+            e_entry: hdr.e_entry,
+            e_phoff: hdr.e_phoff,
+            e_shoff: hdr.e_shoff,
+            e_flags: hdr.e_flags,
+            e_ehsize: hdr.e_ehsize,
+            e_phentsize: hdr.e_phentsize,
+            e_phnum: hdr.e_phnum,
+            e_shentsize: hdr.e_shentsize,
+            e_shnum: hdr.e_shnum,
+            e_shstrndx: hdr.e_shstrndx,
+        }
+    }
+
+    pub fn downcast_elf32(&self) -> Elf32Hdr {
+        todo!()
+    }
+
+    pub fn downcast_elf64(&self) -> Elf64Hdr {
+        todo!()
     }
 }
 

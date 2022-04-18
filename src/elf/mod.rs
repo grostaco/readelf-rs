@@ -4,7 +4,7 @@ pub mod shdr;
 
 pub use hdr::ElfHdr;
 pub use phdr::ElfPhdr;
-pub use shdr::ElfShdr;
+pub use shdr::Elf64Shdr;
 // Constants taken directly from linux/elf.h
 
 pub const EI_NINDENT: usize = 16;
@@ -29,14 +29,17 @@ pub const ELFMAG: &'static str = "\x7fELF";
 
 pub const ELFVER: u8 = 1;
 
-// As ElfHdr and ElfPhdr are not packed to avoid unaligned references, care should be taken
-// as to not introduce padding for different generic types
-// See https://github.com/rust-lang/rust/issues/82523
+type Elf32Addr = u32;
+type Elf32Half = u16;
+type Elf32Off = u32;
+type Elf32Sword = i32;
+type Elf32Word = u32;
 
-pub type ElfHdr32 = hdr::ElfHdr<u16, u32, u32, u32>;
-pub type ElfPhdr32 = phdr::ElfPhdr<u32, u32, u32>;
-pub type ElfShdr32 = shdr::ElfShdr<u32, u32, u32>;
-
-pub type ElfHdr64 = hdr::ElfHdr<u16, u32, u64, u64>;
-pub type ElfPhdr64 = phdr::ElfPhdr<u32, u64, u64>;
-pub type ElfShdr64 = shdr::ElfShdr<u32, u64, u64>;
+type Elf64Addr = u64;
+type Elf64Half = u16;
+type Elf64SHalf = i16;
+type Elf64Off = u64;
+type Elf64Sword = i32;
+type Elf64Word = u32;
+type Elf64Xword = u64;
+type Elf64Sxword = u64;

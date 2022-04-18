@@ -1,7 +1,8 @@
 #![feature(int_log)]
 
 use std::{
-    mem::size_of,
+    fs::OpenOptions,
+    io::{BufRead, BufReader, Read, Seek, SeekFrom},
     path::{Path, PathBuf},
     str::FromStr,
 };
@@ -9,10 +10,15 @@ use std::{
 use clap::Parser;
 
 mod elf;
-use elf::ElfHdr64;
+
+use num::ToPrimitive;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
-use crate::elf::{hdr::Endian, ElfShdr64, ELFVER};
+use crate::elf::{
+    hdr::{ElfClass, Endian},
+    shdr::{ElfShdr, SectionType},
+    ElfHdr, ELFVER,
+};
 
 macro_rules! set_color {
     ($stdout:expr, $color:path) => {
@@ -74,7 +80,7 @@ fn main() {
 
     for f in args.files {
         if args.show_headers {
-            let hdr = ElfHdr64::read(Path::new("../ComputerSystems/bin/out")).unwrap();
+            let hdr = ElfHdr::read(Path::new("../ComputerSystems/bin/out")).unwrap();
 
             set_color!(stdout, Color::Yellow);
             print!("ELF Header");
@@ -92,10 +98,10 @@ fn main() {
                 stdout,
                 Color::Green,
                 "Class",
-                match hdr.class() {
-                    1 => "ELF32",
-                    2 => "ELF64",
-                    _ => "Unknown",
+                match hdr.class().unwrap() {
+                    ElfClass::ElfClass32 => "ELF32",
+                    ElfClass::ElfClass64 => "ELF64",
+                    ElfClass::None => "Unknown",
                 },
                 36
             );
@@ -252,20 +258,23 @@ fn main() {
             print_color!(stdout, Color::White, "{}", "Nr");
             print_color!(stdout, Color::Blue, "{}", "]");
 
-            print_color!(stdout, Color::Green, " {:16}", "Name");
-            print_color!(stdout, Color::Green, " {:16}", "Type");
-            print_color!(stdout, Color::Green, " {:16}", "Address");
-            print_color!(stdout, Color::Green, " {:16}\n      ", "Offset");
+            print_color!(stdout, Color::Green, " {:18}", "Name");
+            print_color!(stdout, Color::Green, " {:18}", "Type");
+            print_color!(stdout, Color::Green, " {:18}", "Address");
+            print_color!(stdout, Color::Green, " {:18}\n      ", "Offset");
 
-            print_color!(stdout, Color::Green, " {:16}", "Size");
-            print_color!(stdout, Color::Green, " {:16}", "EntSize");
-            print_color!(stdout, Color::Green, " {:16}", "Flags  Link  Info");
-            print_color!(stdout, Color::Green, " {:16}", "Align");
+            print_color!(stdout, Color::Green, " {:18}", "Size");
+            print_color!(stdout, Color::Green, " {:18}", "EntSize");
+            print_color!(stdout, Color::Green, " {:18}", "Flags  Link  Info");
+            print_color!(stdout, Color::Green, " {:18}", "Align");
 
-            let shdrs = ElfShdr64::read::<u16>(&PathBuf::from_str(f.as_str()).unwrap()).unwrap();
+            let it_shdr = ElfShdr::iter(&f).unwrap();
+            let table = ElfShdr::read_string_table(&f).unwrap();
 
-            let max_pad = shdrs.len().log10() as usize + 1;
-            for (i, shdr) in shdrs.iter().enumerate() {
+            // let max_pad = shdrs.size_hint().0.log10() as usize + 1;
+            let max_pad = 3;
+
+            for (i, shdr) in it_shdr.enumerate() {
                 print_color!(stdout, Color::Blue, "{}", "\n  [");
                 print_color!(
                     stdout,
@@ -277,7 +286,24 @@ fn main() {
 
                 print_color!(stdout, Color::Blue, "{}", "] ");
                 set_color!(stdout, Color::White);
-                print!("{}", 00000);
+                print!(
+                    "{:18}",
+                    table
+                        .iter()
+                        .skip(shdr.name() as usize)
+                        .take(16 + 1)
+                        .take_while(|&&c| c != 0)
+                        .map(|c| *c as char)
+                        .collect::<String>()
+                );
+
+                // print!(
+                //     " {:18}",
+                //     match shdr.sh_type {
+                //         SectionType::NULL => "NULL",
+                //         _ => "?",
+                //     }
+                // );
             }
             println!("");
         }
