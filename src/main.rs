@@ -1,7 +1,5 @@
 #![feature(int_log)]
 
-use std::{fs::File, path::Path};
-
 use clap::Parser;
 
 #[allow(dead_code)]
@@ -11,7 +9,7 @@ use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 use crate::elf::{
     hdr::{ElfClass, Endian},
     shdr::SectionFlag,
-    ElfHdr, ELFVER,
+    ELFVER,
 };
 
 macro_rules! set_color {
@@ -72,15 +70,11 @@ fn main() {
     let mut should_pad = false;
     let mut stdout = StandardStream::stdout(ColorChoice::Always);
 
-    let mut file = File::open("../ComputerSystems/bin/out").unwrap();
-    let hdr = ElfHdr::read_file(&mut file).unwrap();
-    println!("{:#?}", hdr);
-
     for f in args.files {
-        let elf = elf::core::File::new("../ComputerSystems/bin/out").unwrap();
+        let elf = elf::core::File::new(&f).unwrap();
 
         if args.show_headers {
-            let hdr = ElfHdr::read(Path::new("../ComputerSystems/bin/out")).unwrap();
+            let hdr = elf.header();
 
             set_color!(stdout, Color::Yellow);
             print!("ELF Header");
@@ -284,9 +278,8 @@ fn main() {
                 set_color!(stdout, Color::White);
                 print!(
                     "{:18}",
-                    &elf.string_lookup(shdr.name() as usize)
+                    &elf.string_lookup_iter(shdr.name() as usize)
                         .unwrap()
-                        .chars()
                         .take(16)
                         .collect::<String>()
                 );

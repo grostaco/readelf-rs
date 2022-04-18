@@ -41,18 +41,21 @@ impl File {
         &self.section_headers
     }
 
-    pub fn string_lookup(&self, index: usize) -> Option<String> {
+    pub fn string_lookup_iter(&self, index: usize) -> Option<impl Iterator<Item = char> + '_> {
         if index > self.string_table.len() {
             return None;
         }
-
         Some(
             self.string_table
                 .iter()
                 .skip(index)
                 .take_while(|&&c| c != 0)
-                .map(|&c| char::from(c))
-                .collect::<String>(),
+                .map(|&c| char::from(c)),
         )
+    }
+
+    #[inline]
+    pub fn string_lookup(&self, index: usize) -> Option<String> {
+        self.string_lookup_iter(index).map(|it| it.collect())
     }
 }
