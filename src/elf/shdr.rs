@@ -16,7 +16,6 @@ use super::{
     ElfHdr,
 };
 
-#[repr(C)]
 #[derive(Debug)]
 pub struct ElfShdr {
     name: Elf64Word,
@@ -140,25 +139,6 @@ impl ElfShdr {
         unsafe { transmute_copy(self) }
     }
 
-    pub fn upcast_elf32(shdr: &Elf32Shdr) -> Self {
-        Self {
-            name: shdr.name,
-            section_type: shdr.section_type,
-            flags: shdr.flags.to_u64().unwrap(),
-            addr: shdr.addr.to_u64().unwrap(),
-            offset: shdr.offset.to_u64().unwrap(),
-            size: shdr.size.to_u64().unwrap(),
-            link: shdr.link,
-            info: shdr.info,
-            addralign: shdr.addralign.to_u64().unwrap(),
-            entsize: shdr.entsize.to_u64().unwrap(),
-        }
-    }
-
-    fn upcast_elf64(shdr: &Elf64Shdr) -> Self {
-        unsafe { transmute_copy(shdr) }
-    }
-
     pub fn read_string_table<P: AsRef<Path>>(path: P) -> Result<Vec<u8>, io::Error> {
         let hdr = ElfHdr::read(&path)?;
         let index = (hdr.e_shentsize as u64 * hdr.e_shstrndx as u64) + hdr.e_shoff;
@@ -167,7 +147,7 @@ impl ElfShdr {
 
         file.seek(SeekFrom::Start(index))?;
 
-        let shdr = match hdr.class().unwrap() {
+        let shdr: Self = match hdr.class().unwrap() {
             ElfClass::None | ElfClass::ElfClass32 => unsafe {
                 let mut buf = MaybeUninit::<Elf32Shdr>::uninit();
                 file.read_exact(slice::from_raw_parts_mut(
@@ -175,7 +155,7 @@ impl ElfShdr {
                     std::mem::size_of::<Elf32Shdr>(),
                 ))
                 .unwrap();
-                ElfShdr::upcast_elf32(&buf.assume_init())
+                buf.assume_init().into()
             },
             ElfClass::ElfClass64 => unsafe {
                 let mut buf = MaybeUninit::<Elf64Shdr>::uninit();
@@ -184,7 +164,7 @@ impl ElfShdr {
                     std::mem::size_of::<Elf64Shdr>(),
                 ))
                 .unwrap();
-                ElfShdr::upcast_elf64(&buf.assume_init())
+                buf.assume_init().into()
             },
         };
 
@@ -214,6 +194,40 @@ impl ElfShdr {
     }
 }
 
+impl From<Elf32Shdr> for ElfShdr {
+    fn from(shdr: Elf32Shdr) -> Self {
+        Self {
+            name: shdr.name,
+            section_type: shdr.section_type,
+            flags: shdr.flags.to_u64().unwrap(),
+            addr: shdr.addr.to_u64().unwrap(),
+            offset: shdr.offset.to_u64().unwrap(),
+            size: shdr.size.to_u64().unwrap(),
+            link: shdr.link,
+            info: shdr.info,
+            addralign: shdr.addralign.to_u64().unwrap(),
+            entsize: shdr.entsize.to_u64().unwrap(),
+        }
+    }
+}
+
+impl From<Elf64Shdr> for ElfShdr {
+    fn from(shdr: Elf64Shdr) -> Self {
+        Self {
+            name: shdr.name,
+            section_type: shdr.section_type,
+            flags: shdr.flags.to_u64().unwrap(),
+            addr: shdr.addr.to_u64().unwrap(),
+            offset: shdr.offset.to_u64().unwrap(),
+            size: shdr.size.to_u64().unwrap(),
+            link: shdr.link,
+            info: shdr.info,
+            addralign: shdr.addralign.to_u64().unwrap(),
+            entsize: shdr.entsize.to_u64().unwrap(),
+        }
+    }
+}
+
 impl Iterator for ElfShdrIter {
     type Item = ElfShdr;
     fn next(&mut self) -> Option<Self::Item> {
@@ -232,7 +246,7 @@ impl Iterator for ElfShdrIter {
                     ))
                     .unwrap();
 
-                Some(ElfShdr::upcast_elf64(&buf.assume_init()))
+                Some(buf.assume_init().into())
             },
             false => unsafe {
                 let mut buf = MaybeUninit::<Elf32Shdr>::uninit();
@@ -243,9 +257,13 @@ impl Iterator for ElfShdrIter {
                     ))
                     .unwrap();
 
-                Some(ElfShdr::upcast_elf32(&buf.assume_init()))
+                Some(buf.assume_init().into())
             },
         }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.remaining, Some(self.remaining))
     }
 }
 

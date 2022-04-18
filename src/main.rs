@@ -271,8 +271,7 @@ fn main() {
             let it_shdr = ElfShdr::iter(&f).unwrap();
             let table = ElfShdr::read_string_table(&f).unwrap();
 
-            // let max_pad = shdrs.size_hint().0.log10() as usize + 1;
-            let max_pad = 3;
+            let max_pad = it_shdr.size_hint().0.log10() as usize + 1;
 
             for (i, shdr) in it_shdr.enumerate() {
                 print_color!(stdout, Color::Blue, "{}", "\n  [");
