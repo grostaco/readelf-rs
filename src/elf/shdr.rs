@@ -120,25 +120,6 @@ impl ElfShdr {
         self.entsize
     }
 
-    pub fn downcast_elf32(&self) -> Option<Elf32Shdr> {
-        Some(Elf32Shdr {
-            name: self.name,
-            section_type: self.section_type,
-            flags: self.flags.to_u32()?,
-            addr: self.addr.to_u32()?,
-            offset: self.offset.to_u32()?,
-            size: self.size.to_u32()?,
-            link: self.link,
-            info: self.info,
-            addralign: self.addralign.to_u32()?,
-            entsize: self.entsize.to_u32()?,
-        })
-    }
-
-    pub fn downcast_elf64(&self) -> Elf64Shdr {
-        unsafe { transmute_copy(self) }
-    }
-
     pub fn read_string_table<P: AsRef<Path>>(path: P) -> Result<Vec<u8>, io::Error> {
         let hdr = ElfHdr::read(&path)?;
         let index = (hdr.e_shentsize as u64 * hdr.e_shstrndx as u64) + hdr.e_shoff;
@@ -216,15 +197,50 @@ impl From<Elf64Shdr> for ElfShdr {
         Self {
             name: shdr.name,
             section_type: shdr.section_type,
-            flags: shdr.flags.to_u64().unwrap(),
-            addr: shdr.addr.to_u64().unwrap(),
-            offset: shdr.offset.to_u64().unwrap(),
-            size: shdr.size.to_u64().unwrap(),
+            flags: shdr.flags,
+            addr: shdr.addr,
+            offset: shdr.offset,
+            size: shdr.size,
             link: shdr.link,
             info: shdr.info,
-            addralign: shdr.addralign.to_u64().unwrap(),
-            entsize: shdr.entsize.to_u64().unwrap(),
+            addralign: shdr.addralign,
+            entsize: shdr.entsize,
         }
+    }
+}
+
+impl From<ElfShdr> for Elf64Shdr {
+    fn from(shdr: ElfShdr) -> Self {
+        Self {
+            name: shdr.name,
+            section_type: shdr.section_type,
+            flags: shdr.flags,
+            addr: shdr.addr,
+            offset: shdr.offset,
+            size: shdr.size,
+            link: shdr.link,
+            info: shdr.info,
+            addralign: shdr.addralign,
+            entsize: shdr.entsize,
+        }
+    }
+}
+
+impl TryFrom<ElfShdr> for Elf32Shdr {
+    type Error = ();
+    fn try_from(value: ElfShdr) -> Result<Self, Self::Error> {
+        Ok(Self {
+            name: value.name,
+            section_type: value.section_type,
+            flags: value.flags.to_u32().ok_or(())?,
+            addr: value.addr.to_u32().ok_or(())?,
+            offset: value.offset.to_u32().ok_or(())?,
+            size: value.size.to_u32().ok_or(())?,
+            link: value.link,
+            info: value.info,
+            addralign: value.addralign.to_u32().ok_or(())?,
+            entsize: value.entsize.to_u32().ok_or(())?,
+        })
     }
 }
 
