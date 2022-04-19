@@ -1,5 +1,5 @@
 use std::{
-    alloc::{alloc, Layout},
+    alloc::{alloc, dealloc, Layout},
     borrow::Borrow,
     io::{self, Read, Seek, SeekFrom},
     mem::size_of,
@@ -92,7 +92,7 @@ impl ElfPhdr {
                 hdr.e_phnum as usize * size_of::<Elf64Phdr>(),
             ))?;
 
-            Ok(match hdr.class().unwrap() {
+            let result = Ok(match hdr.class().unwrap() {
                 ElfClass::ElfClass64 => {
                     (*std::ptr::slice_from_raw_parts(ptr as *const Elf64Phdr, hdr.e_phnum.into()))
                         .iter()
@@ -103,7 +103,11 @@ impl ElfPhdr {
                     .iter()
                     .map(|phdr| phdr.try_into().unwrap())
                     .collect::<Vec<ElfPhdr>>(),
-            })
+            });
+
+            dealloc(ptr, layout);
+
+            result
         }
     }
 

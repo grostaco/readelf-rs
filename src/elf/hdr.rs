@@ -135,6 +135,7 @@ impl ElfHdr {
             ))?;
 
             let hdr = buf.assume_init();
+
             Ok(match hdr.e_ident[EI_CLASS] {
                 1 => Self::upcast_elf32(&hdr),
                 2 => {
