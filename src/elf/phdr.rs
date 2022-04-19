@@ -32,6 +32,8 @@ pub enum ProgramType {
     GnuStack = 0x60000000 + 0x474e551,
     GnuRelro = 0x60000000 + 0x474e552,
     GnuProperty = 0x60000000 + 0x474e553,
+    GnuMbindLo = 0x60000000 + 0x474e555,
+    GnuMbindHi = 0x60000000 + 0x474e555 + 4096 - 1,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug, Copy)]
@@ -48,6 +50,7 @@ pub struct ElfPhdr {
     p_vaddr: Elf64Addr,
     p_paddr: Elf64Addr,
     p_flags: Elf64Xword,
+    p_filesz: Elf64Xword,
     p_memsz: Elf64Xword,
     p_align: Elf64Xword,
 }
@@ -120,8 +123,12 @@ impl ElfPhdr {
         self.p_paddr
     }
 
-    pub fn filesz(&self) -> Elf64Xword {
+    pub fn memsz(&self) -> Elf64Xword {
         self.p_memsz
+    }
+
+    pub fn filesz(&self) -> Elf64Xword {
+        self.p_filesz
     }
 
     pub fn flags(&self) -> ProgramFlags {
@@ -146,6 +153,7 @@ impl From<&Elf64Phdr> for ElfPhdr {
             p_vaddr: phdr.p_vaddr,
             p_paddr: phdr.p_paddr,
             p_memsz: phdr.p_memsz,
+            p_filesz: phdr.p_filesz,
             p_flags: phdr.p_flags as u64,
             p_align: phdr.p_align,
         }
@@ -160,6 +168,7 @@ impl TryFrom<&Elf32Phdr> for ElfPhdr {
             p_offset: phdr.p_offset.to_u64().ok_or(())?,
             p_vaddr: phdr.p_vaddr.to_u64().ok_or(())?,
             p_paddr: phdr.p_paddr.to_u64().ok_or(())?,
+            p_filesz: phdr.p_filesz.to_u64().ok_or(())?,
             p_memsz: phdr.p_memsz.to_u64().ok_or(())?,
             p_flags: phdr.p_flags.to_u64().ok_or(())?,
             p_align: phdr.p_align.to_u64().ok_or(())?,

@@ -337,7 +337,7 @@ pub enum SectionType {
     VerSym = 0x6FFFFFFF,
 }
 
-#[repr(usize)]
+#[repr(u64)]
 pub enum SectionFlag {
     Write = 1 << 0,
     Alloc = 1 << 1,

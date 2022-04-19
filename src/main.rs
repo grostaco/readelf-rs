@@ -8,6 +8,7 @@ use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 use crate::elf::{
     hdr::{ElfClass, Endian},
+    internal::elf_section_in_segment,
     shdr::SectionFlag,
     ELFVER,
 };
@@ -420,6 +421,23 @@ fn main() {
                     header.flags().display(),
                     header.align()
                 )
+            }
+
+            println!("Section to Segment mapping:");
+            println!(" Segment Sections...");
+
+            for (i, phdr) in elf.program_headers().iter().enumerate() {
+                print!("  {i:02}     ");
+
+                let section = elf.section_headers().iter().skip(1);
+
+                for shdr in section {
+                    //print!("{} ", elf_section_in_segment(shdr, phdr, true, true));
+                    if elf_section_in_segment(shdr, phdr, true, true) {
+                        print!("{} ", elf.string_lookup(shdr.name() as usize).unwrap())
+                    }
+                }
+                println!()
             }
         }
     }
