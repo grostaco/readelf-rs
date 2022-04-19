@@ -76,6 +76,9 @@ struct Args {
 
     #[clap(short = 's')]
     show_symbols: bool,
+
+    #[clap(short = 'l')]
+    show_program_header: bool,
 }
 
 fn main() {
@@ -100,7 +103,7 @@ fn main() {
             for i in hdr.ident() {
                 print!(" {:02x}", i);
             }
-            print!("\n");
+            println!();
             attr_pad!(
                 stdout,
                 Color::Green,
@@ -257,7 +260,7 @@ fn main() {
 
         if args.show_sections {
             if should_pad {
-                println!("");
+                println!();
             }
             print_color!(stdout, Color::Yellow, "{}\n  ", "Section Headers");
 
@@ -303,7 +306,7 @@ fn main() {
                 );
 
                 print!("{:016x}", shdr.addr());
-                print!("  {:08x}\n", shdr.offset());
+                println!("  {:08x}", shdr.offset());
                 print!(
                     "{empt:pad$}{sz:016x}",
                     empt = "",
@@ -316,7 +319,7 @@ fn main() {
                 let mut sh_flags = shdr.flags() as i64;
                 while sh_flags != 0 {
                     let flag = sh_flags & -sh_flags;
-                    sh_flags = sh_flags & !flag;
+                    sh_flags &= !flag;
                     let cflag = match flag {
                         flag if flag == SectionFlag::Write as i64 => 'W',
                         flag if flag == SectionFlag::Alloc as i64 => 'A',
@@ -342,7 +345,7 @@ fn main() {
                 print!("{:>6}", shdr.addralign());
             }
 
-            println!("");
+            println!();
         }
 
         if args.show_symbols {
@@ -358,11 +361,6 @@ fn main() {
                 print!(" {} ", symbols.len());
                 set_color!(stdout);
                 println!("entries");
-                // println!(
-                //     "Symbole table '{}' contains {} entries:",
-                //     section,
-                //     symbols.len()
-                // );
                 if elf.header().class().unwrap() == ElfClass::ElfClass64 {
                     println!("   Num:    Value          Size Type    Bind   Vis      Ndx Name");
                 } else {
@@ -392,6 +390,23 @@ fn main() {
                 }
                 println!("\n\n");
             }
+        }
+
+        if args.show_program_header {
+            println!(
+                "ELF file type is {}",
+                elf.header().file_type().unwrap().display()
+            );
+            println!("Entry point at 0x{:x}", elf.header().e_entry);
+            println!(
+                "There are {} program headers, starting at offset {}\n",
+                elf.header().e_phnum,
+                elf.header().e_phoff
+            );
+
+            println!("Program Headers:");
+            println!("  Type           Offset             VirtAddr           PhysAddr");
+            println!("                 FileSiz            MemSiz              Flags Align");
         }
     }
 }

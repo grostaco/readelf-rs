@@ -308,6 +308,7 @@ impl Iterator for ElfShdrIter {
     }
 }
 
+#[repr(usize)]
 #[derive(Clone, PartialEq, Eq, Debug, FromPrimitive)]
 pub enum SectionType {
     Null = 0x0,
@@ -336,6 +337,7 @@ pub enum SectionType {
     VerSym = 0x6FFFFFFF,
 }
 
+#[repr(usize)]
 pub enum SectionFlag {
     Write = 1 << 0,
     Alloc = 1 << 1,

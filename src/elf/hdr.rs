@@ -76,13 +76,13 @@ pub struct Elf64Hdr {
 
 pub enum OsABI {
     None,
-    HPUX,
+    HpUX,
     NetBSD,
     Linux,
     Solaris,
-    IRIX,
+    Irix,
     FreeBSD,
-    AIX,
+    Aix,
     Novell,
     OpenBSD,
     OpenVMS,
@@ -98,9 +98,9 @@ pub enum ObjectType {
     Dyn,
     Core,
     Loos,
-    HIOS,
-    LOPROC,
-    HIPROC,
+    HiOS,
+    LoProc,
+    HiProc,
 }
 
 #[derive(FromPrimitive, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -113,6 +113,15 @@ pub enum ElfClass {
 pub enum Endian {
     Little,
     Big,
+}
+
+#[derive(FromPrimitive, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum ElfType {
+    None,
+    Rel,
+    Exec,
+    Dyn,
+    Core,
 }
 
 impl ElfHdr {
@@ -193,6 +202,10 @@ impl ElfHdr {
         x == 0x7f454c46
     }
 
+    pub fn file_type(&self) -> Option<ElfType> {
+        ElfType::from_u16(self.e_type)
+    }
+
     pub fn class(&self) -> Option<ElfClass> {
         ElfClass::from_u8(self.e_ident[EI_CLASS])
     }
@@ -260,11 +273,11 @@ impl ElfHdr {
     pub fn os_abi(&self) -> OsABI {
         match self.e_ident[EI_OSABI] {
             0x0 => OsABI::None,
-            0x1 => OsABI::HPUX,
+            0x1 => OsABI::HpUX,
             0x2 => OsABI::NetBSD,
             0x3 => OsABI::Linux,
             0x6 => OsABI::Solaris,
-            0x8 => OsABI::IRIX,
+            0x8 => OsABI::Irix,
             0x9 => OsABI::FreeBSD,
             0x0A => OsABI::Tru64,
             0x0B => OsABI::Novell,
@@ -286,9 +299,9 @@ impl ElfHdr {
             0x3 => Some(ObjectType::Dyn),
             0x4 => Some(ObjectType::Core),
             0xFE00 => Some(ObjectType::Loos),
-            0xFEFF => Some(ObjectType::HIOS),
-            0xFF00 => Some(ObjectType::LOPROC),
-            0xFFFF => Some(ObjectType::HIPROC),
+            0xFEFF => Some(ObjectType::HiOS),
+            0xFF00 => Some(ObjectType::LoProc),
+            0xFFFF => Some(ObjectType::HiProc),
             _ => None,
         }
     }
@@ -344,12 +357,12 @@ impl Display for OsABI {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
             Self::None => "UNIX - System V",
-            Self::HPUX => "HP-UX",
+            Self::HpUX => "HP-UX",
             Self::NetBSD => "NetBSD",
             Self::Linux => "Linux",
             Self::Solaris => "Solaris",
-            Self::IRIX => "IRIX",
-            Self::AIX => "AIX",
+            Self::Irix => "IRIX",
+            Self::Aix => "AIX",
             Self::Novell => "Novell Modesto",
             Self::OpenBSD => "OpenBSD",
             Self::OpenVMS => "OpenVMS",
@@ -357,5 +370,11 @@ impl Display for OsABI {
             Self::Tru64 => "UNIX - Tru64",
             Self::Unknown(_) => "Unknown",
         })
+    }
+}
+
+impl ElfType {
+    pub fn display(&self) -> String {
+        format!("{:?}", self).to_uppercase()
     }
 }

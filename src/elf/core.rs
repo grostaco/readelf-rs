@@ -1,7 +1,7 @@
 use std::{
     alloc::{alloc, dealloc, Layout},
     fs,
-    io::{Read, Seek, SeekFrom},
+    io::{self, Read, Seek, SeekFrom},
     path::{Path, PathBuf},
     slice,
 };
@@ -13,6 +13,7 @@ use super::{
     ElfHdr,
 };
 
+type Table = Vec<u8>;
 pub struct File {
     file_path: PathBuf,
     file: fs::File,
@@ -51,7 +52,7 @@ impl File {
 
     // Please for the love of god someone rewrite this
     // This is a powder keg waiting to explode
-    pub fn table_symbols(&mut self) -> Result<Vec<(String, Vec<u8>, Vec<ElfSym>)>, std::io::Error> {
+    pub fn table_symbols(&mut self) -> io::Result<Vec<(String, Table, Vec<ElfSym>)>> {
         let sym_sections = self.section_headers.iter().filter(|shdr| {
             shdr.section_type()
                 .map(|st| st == SectionType::SymTab || st == SectionType::DynSym)

@@ -1,3 +1,4 @@
+#![allow(clippy::unused_io_amount)]
 pub mod core;
 pub mod hdr;
 pub mod phdr;
@@ -27,7 +28,7 @@ pub const ELFMAG0: usize = 0x7f;
 pub const ELFMAG1: usize = 'E' as usize;
 pub const ELFMAG2: usize = 'L' as usize;
 pub const ELFMAG3: usize = 'F' as usize;
-pub const ELFMAG: &'static str = "\x7fELF";
+pub const ELFMAG: &str = "\x7fELF";
 
 pub const ELFVER: u8 = 1;
 
