@@ -18,6 +18,16 @@ macro_rules! set_color {
             .set_color(ColorSpec::new().set_fg(Some($color)))
             .unwrap();
     };
+
+    ($stdout:expr) => {
+        $stdout
+            .set_color(
+                ColorSpec::new()
+                    .set_fg(Some(Color::White))
+                    .set_intense(false),
+            )
+            .unwrap();
+    };
 }
 
 macro_rules! print_color {
@@ -338,11 +348,21 @@ fn main() {
         if args.show_symbols {
             let symbols = elf.table_symbols().unwrap();
             for (section, table, symbols) in symbols {
-                println!(
-                    "Symbole table '{}' contains {} entries:",
-                    section,
-                    symbols.len()
-                );
+                set_color!(stdout);
+                print!("Symbol table");
+                set_color!(stdout, Color::Magenta);
+                print!(" {} ", section);
+                set_color!(stdout);
+                print!("contains");
+                set_color!(stdout, Color::Green);
+                print!(" {} ", symbols.len());
+                set_color!(stdout);
+                println!("entries");
+                // println!(
+                //     "Symbole table '{}' contains {} entries:",
+                //     section,
+                //     symbols.len()
+                // );
                 if elf.header().class().unwrap() == ElfClass::ElfClass64 {
                     println!("   Num:    Value          Size Type    Bind   Vis      Ndx Name");
                 } else {
