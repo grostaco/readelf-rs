@@ -407,6 +407,20 @@ fn main() {
             println!("Program Headers:");
             println!("  Type           Offset             VirtAddr           PhysAddr");
             println!("                 FileSiz            MemSiz              Flags Align");
+
+            for header in elf.program_headers() {
+                println!(
+                    "  {:15}0x{:016x} 0x{:016x} 0x{:016x}\n                 0x{:016x} 0x{:016x}{:^8}0x{:x}",
+                    header.program_type().unwrap().display(),
+                    header.offset(),
+                    header.vaddr(),
+                    header.paddr(),
+                    header.filesz(),
+                    header.filesz(),
+                    header.flags().display(),
+                    header.align()
+                )
+            }
         }
     }
 }

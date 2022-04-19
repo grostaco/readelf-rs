@@ -10,7 +10,7 @@ use super::{
     hdr::ElfClass,
     shdr::{ElfShdr, SectionType},
     sym::{Elf32Sym, Elf64Sym, ElfSym},
-    ElfHdr,
+    ElfHdr, ElfPhdr,
 };
 
 type Table = Vec<u8>;
@@ -18,6 +18,7 @@ pub struct File {
     file_path: PathBuf,
     file: fs::File,
     header: ElfHdr,
+    program_headers: Vec<ElfPhdr>,
     section_headers: Vec<ElfShdr>,
     string_table: Vec<u8>,
 }
@@ -30,6 +31,7 @@ impl File {
         let mut file = fs::File::open(&path)?;
         let header = ElfHdr::read_file(&mut file)?;
 
+        let program_headers = ElfPhdr::read(&header, &mut file).unwrap();
         let section_headers = ElfShdr::iter(&path)?.collect::<Vec<ElfShdr>>();
         let string_table = ElfShdr::get_string_table(&mut file, &header)?;
 
@@ -37,6 +39,7 @@ impl File {
             file_path: PathBuf::from(path.as_ref()),
             file,
             header,
+            program_headers,
             section_headers,
             string_table,
         })
@@ -48,6 +51,10 @@ impl File {
 
     pub fn section_headers(&self) -> &[ElfShdr] {
         &self.section_headers
+    }
+
+    pub fn program_headers(&self) -> &[ElfPhdr] {
+        &self.program_headers
     }
 
     // Please for the love of god someone rewrite this
