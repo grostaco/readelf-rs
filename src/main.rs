@@ -432,7 +432,6 @@ fn main() {
                 let section = elf.section_headers().iter().skip(1);
 
                 for shdr in section {
-                    //print!("{} ", elf_section_in_segment(shdr, phdr, true, true));
                     if elf_section_in_segment(shdr, phdr, true, true) {
                         print!("{} ", elf.string_lookup(shdr.name() as usize).unwrap())
                     }
