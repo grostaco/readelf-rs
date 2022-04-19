@@ -1,7 +1,7 @@
 use std::ptr;
 
 use num::ToPrimitive;
-use num_derive::FromPrimitive;
+use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
 
 use super::{Elf32Addr, Elf32Half, Elf32Word, Elf64Addr, Elf64Half, Elf64Word, Elf64Xword};
@@ -36,7 +36,7 @@ pub struct ElfSym {
     other: u8,
 }
 
-#[derive(FromPrimitive)]
+#[derive(Debug, FromPrimitive, ToPrimitive)]
 pub enum SymbolType {
     NoType,
     Object,
@@ -54,6 +54,25 @@ pub enum SymbolType {
     HiProc = 15,
 }
 
+#[derive(Debug, FromPrimitive, ToPrimitive)]
+pub enum SymbolBinding {
+    Local,
+    Global = 1,
+    Weak = 2,
+    Loos = 10,
+    HiOS = 12,
+    LoPROC = 13,
+    HiPROC = 15,
+}
+
+#[derive(Debug, FromPrimitive, ToPrimitive)]
+pub enum SymbolVis {
+    Default,
+    Internal,
+    Hidden,
+    Protected,
+}
+
 impl ElfSym {
     pub fn name(&self) -> Elf64Word {
         self.name
@@ -67,8 +86,19 @@ impl ElfSym {
         self.size
     }
 
-    pub fn info(&self) -> Option<SymbolType> {
-        SymbolType::from_u8(self.info)
+    // pub fn info(&self) -> Option<SymbolType> {
+    // }
+
+    pub fn binding(&self) -> Option<SymbolBinding> {
+        SymbolBinding::from_u8(self.info >> 4)
+    }
+
+    pub fn symbol_type(&self) -> Option<SymbolType> {
+        SymbolType::from_u8(self.info & 0xF)
+    }
+
+    pub fn visibility(&self) -> Option<SymbolVis> {
+        SymbolVis::from_u8(self.other & 0xF)
     }
 
     pub fn shndx(&self) -> u16 {
@@ -77,6 +107,24 @@ impl ElfSym {
 
     pub fn other(&self) -> u8 {
         self.other
+    }
+}
+
+impl SymbolType {
+    pub fn display(&self) -> String {
+        format!("{:?}", self).to_uppercase()
+    }
+}
+
+impl SymbolBinding {
+    pub fn display(&self) -> String {
+        format!("{:?}", self).to_uppercase()
+    }
+}
+
+impl SymbolVis {
+    pub fn display(&self) -> String {
+        format!("{:?}", self).to_uppercase()
     }
 }
 

@@ -147,31 +147,6 @@ impl ElfShdr {
         hdr: &ElfHdr,
     ) -> Result<Vec<u8>, std::io::Error> {
         Self::get_data(file, hdr, hdr.e_shstrndx.into(), hdr.e_shoff)
-        // let index = (hdr.e_shentsize as u64 * hdr.e_shstrndx as u64) + hdr.e_shoff;
-        // let mut buf = MaybeUninit::<Elf64Shdr>::uninit();
-
-        // file.seek(SeekFrom::Start(index))?;
-
-        // let shdr: ElfShdr = unsafe {
-        //     file.read(slice::from_raw_parts_mut(
-        //         transmute(&mut buf),
-        //         mem::size_of::<Elf64Shdr>(),
-        //     ))?;
-
-        //     match hdr.class().unwrap() {
-        //         ElfClass::None | ElfClass::ElfClass32 => {
-        //             ptr::read(buf.as_ptr() as *const Elf32Shdr).into()
-        //         }
-
-        //         ElfClass::ElfClass64 => buf.assume_init().into(),
-        //     }
-        // };
-
-        // let mut buf = vec![0; shdr.size() as usize];
-        // file.seek(SeekFrom::Start(shdr.offset()))?;
-        // file.read(&mut buf)?;
-
-        // Ok(buf)
     }
 
     pub fn get_data<R: Read + Seek>(

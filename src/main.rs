@@ -350,10 +350,18 @@ fn main() {
                 }
                 for (i, symbol) in symbols.iter().enumerate() {
                     println!(
-                        "{:>6}: {:016x}  {:>4} {}",
+                        "{:>6}: {:016x}  {:>4} {:7} {:6} {} {:>3} {}",
                         i,
                         symbol.value(),
                         symbol.size(),
+                        symbol.symbol_type().unwrap().display(),
+                        symbol.binding().unwrap().display(),
+                        symbol.visibility().unwrap().display(),
+                        match symbol.shndx() {
+                            0 => "UND".to_string(),
+                            65521 => "ABS".to_string(),
+                            i => i.to_string(),
+                        },
                         table
                             .iter()
                             .skip(symbol.name() as usize)
