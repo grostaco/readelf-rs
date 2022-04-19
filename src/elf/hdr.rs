@@ -103,7 +103,7 @@ pub enum ObjectType {
     HIPROC,
 }
 
-#[derive(FromPrimitive)]
+#[derive(FromPrimitive, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum ElfClass {
     None,
     ElfClass32,

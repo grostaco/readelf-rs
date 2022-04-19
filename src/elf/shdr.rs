@@ -141,11 +141,46 @@ impl ElfShdr {
         Ok(buf)
     }
 
+    #[inline]
     pub fn get_string_table<R: Read + Seek>(
         file: &mut R,
         hdr: &ElfHdr,
     ) -> Result<Vec<u8>, std::io::Error> {
-        let index = (hdr.e_shentsize as u64 * hdr.e_shstrndx as u64) + hdr.e_shoff;
+        Self::get_data(file, hdr, hdr.e_shstrndx.into(), hdr.e_shoff)
+        // let index = (hdr.e_shentsize as u64 * hdr.e_shstrndx as u64) + hdr.e_shoff;
+        // let mut buf = MaybeUninit::<Elf64Shdr>::uninit();
+
+        // file.seek(SeekFrom::Start(index))?;
+
+        // let shdr: ElfShdr = unsafe {
+        //     file.read(slice::from_raw_parts_mut(
+        //         transmute(&mut buf),
+        //         mem::size_of::<Elf64Shdr>(),
+        //     ))?;
+
+        //     match hdr.class().unwrap() {
+        //         ElfClass::None | ElfClass::ElfClass32 => {
+        //             ptr::read(buf.as_ptr() as *const Elf32Shdr).into()
+        //         }
+
+        //         ElfClass::ElfClass64 => buf.assume_init().into(),
+        //     }
+        // };
+
+        // let mut buf = vec![0; shdr.size() as usize];
+        // file.seek(SeekFrom::Start(shdr.offset()))?;
+        // file.read(&mut buf)?;
+
+        // Ok(buf)
+    }
+
+    pub fn get_data<R: Read + Seek>(
+        file: &mut R,
+        hdr: &ElfHdr,
+        index: u64,
+        offset: u64,
+    ) -> Result<Vec<u8>, std::io::Error> {
+        let index = (hdr.e_shentsize as u64 * index) + offset;
         let mut buf = MaybeUninit::<Elf64Shdr>::uninit();
 
         file.seek(SeekFrom::Start(index))?;
@@ -155,16 +190,12 @@ impl ElfShdr {
                 transmute(&mut buf),
                 mem::size_of::<Elf64Shdr>(),
             ))?;
+
             match hdr.class().unwrap() {
                 ElfClass::None | ElfClass::ElfClass32 => {
-                    let mut elf32 = MaybeUninit::<Elf32Shdr>::uninit();
-                    ptr::copy_nonoverlapping(
-                        elf32.as_mut_ptr() as *mut u8,
-                        buf.as_mut_ptr() as *mut u8,
-                        mem::size_of::<Elf32Shdr>(),
-                    );
-                    elf32.assume_init().into()
+                    ptr::read(buf.as_ptr() as *const Elf32Shdr).into()
                 }
+
                 ElfClass::ElfClass64 => buf.assume_init().into(),
             }
         };
@@ -302,7 +333,7 @@ impl Iterator for ElfShdrIter {
     }
 }
 
-#[derive(Debug, FromPrimitive)]
+#[derive(Clone, PartialEq, Eq, Debug, FromPrimitive)]
 pub enum SectionType {
     Null = 0x0,
     ProgBits = 0x1,

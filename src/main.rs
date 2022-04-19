@@ -63,6 +63,9 @@ struct Args {
     /// Display the section headers
     #[clap(short = 'S', long = "section-headers", alias = "sections")]
     show_sections: bool,
+
+    #[clap(short = 's')]
+    show_symbols: bool,
 }
 
 fn main() {
@@ -71,7 +74,7 @@ fn main() {
     let mut stdout = StandardStream::stdout(ColorChoice::Always);
 
     for f in args.files {
-        let elf = elf::core::File::new(&f).unwrap();
+        let mut elf = elf::core::File::new(&f).unwrap();
 
         if args.show_headers {
             let hdr = elf.header();
@@ -330,6 +333,37 @@ fn main() {
             }
 
             println!("");
+        }
+
+        if args.show_symbols {
+            let symbols = elf.table_symbols().unwrap();
+            for (section, table, symbols) in symbols {
+                println!(
+                    "Symbole table '{}' contains {} entries:",
+                    section,
+                    symbols.len()
+                );
+                if elf.header().class().unwrap() == ElfClass::ElfClass64 {
+                    println!("   Num:    Value          Size Type    Bind   Vis      Ndx Name");
+                } else {
+                    println!("   Num:    Value  Size Type    Bind   Vis      Ndx Name");
+                }
+                for (i, symbol) in symbols.iter().enumerate() {
+                    println!(
+                        "{:>6}: {:016x}  {:>4} {}",
+                        i,
+                        symbol.value(),
+                        symbol.size(),
+                        table
+                            .iter()
+                            .skip(symbol.name() as usize)
+                            .take_while(|&&p| p != 0)
+                            .map(|&c| c as char)
+                            .collect::<String>()
+                    );
+                }
+                println!("\n\n");
+            }
         }
     }
 }

@@ -1,9 +1,17 @@
 use std::{
+    alloc::{alloc, dealloc, Layout},
     fs,
+    io::{Read, Seek, SeekFrom},
     path::{Path, PathBuf},
+    slice,
 };
 
-use super::{shdr::ElfShdr, ElfHdr};
+use super::{
+    hdr::ElfClass,
+    shdr::{ElfShdr, SectionType},
+    sym::{Elf32Sym, Elf64Sym, ElfSym},
+    ElfHdr,
+};
 
 pub struct File {
     file_path: PathBuf,
@@ -39,6 +47,72 @@ impl File {
 
     pub fn section_headers(&self) -> &[ElfShdr] {
         &self.section_headers
+    }
+
+    // Please for the love of god someone rewrite this
+    // This is a powder keg waiting to explode
+    pub fn table_symbols(&mut self) -> Result<Vec<(String, Vec<u8>, Vec<ElfSym>)>, std::io::Error> {
+        let sym_sections = self.section_headers.iter().filter(|shdr| {
+            shdr.section_type()
+                .map(|st| st == SectionType::SymTab || st == SectionType::DynSym)
+                .unwrap_or(false)
+        });
+
+        let mut v = Vec::new();
+
+        for shdr in sym_sections {
+            let table = if shdr.link() == self.header.table_index().into() {
+                ElfShdr::get_string_table(&mut self.file, &self.header)
+            } else {
+                ElfShdr::get_data(
+                    &mut self.file,
+                    &self.header,
+                    shdr.link() as u64,
+                    self.header.e_shoff,
+                )
+            }
+            .unwrap();
+
+            let name = self.string_lookup(shdr.name() as usize).unwrap();
+
+            self.file.seek(SeekFrom::Start(shdr.offset()))?;
+
+            let buf = unsafe {
+                let layout =
+                    Layout::array::<Elf64Sym>((shdr.size() / shdr.entsize()) as usize).unwrap();
+
+                let ptr = alloc(layout);
+                let slice = slice::from_raw_parts_mut(ptr, shdr.size() as usize);
+
+                self.file.read(slice)?;
+
+                let buf = match self.header.class().unwrap() {
+                    ElfClass::ElfClass32 => (*std::ptr::slice_from_raw_parts(
+                        ptr as *const Elf32Sym,
+                        (shdr.size() / shdr.entsize()) as usize as usize,
+                    ))
+                    .iter()
+                    .map(|sym| sym.try_into().unwrap())
+                    .collect(),
+                    ElfClass::ElfClass64 => (*std::ptr::slice_from_raw_parts(
+                        ptr as *const Elf64Sym,
+                        (shdr.size() / shdr.entsize()) as usize as usize,
+                    ))
+                    .iter()
+                    .map(|sym| sym.into())
+                    .collect::<Vec<ElfSym>>(),
+                    _ => panic!("Unsupported elf type"),
+                };
+
+                dealloc(ptr, layout);
+
+                buf
+            };
+
+            v.push((name, table, buf));
+        }
+
+        Ok(v)
     }
 
     pub fn string_lookup_iter(&self, index: usize) -> Option<impl Iterator<Item = char> + '_> {
