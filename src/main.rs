@@ -444,7 +444,8 @@ fn main() {
         }
 
         if args.show_relocations {
-            elf.relocations().unwrap();
+            //elf.relocations().unwrap();
+            elf.dynamic_section();
         }
     }
 }

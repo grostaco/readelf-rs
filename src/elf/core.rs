@@ -9,6 +9,7 @@ use std::{
 use super::{
     dynamic::{Dyn, DynamicTag, RelaState, DYNAMIC_RELOCATIONS},
     hdr::ElfClass,
+    phdr::ProgramType,
     shdr::{ElfShdr, SectionType},
     sym::{Elf32Sym, Elf64Sym, ElfSym},
     ElfHdr, ElfPhdr,
@@ -21,6 +22,8 @@ pub struct FileData {
     header: ElfHdr,
     program_headers: Vec<ElfPhdr>,
     section_headers: Vec<ElfShdr>,
+    dynamic_addr: u64,
+    dynamic_size: usize,
     dynamic_info: [u64; DynamicTag::Encoding as usize],
     string_table: Vec<u8>,
 }
@@ -37,12 +40,22 @@ impl FileData {
         let section_headers = ElfShdr::iter(&path)?.collect::<Vec<ElfShdr>>();
         let string_table = ElfShdr::get_string_table(&mut file, &header)?;
 
+        let (dynamic_addr, dynamic_size) = match program_headers
+            .iter()
+            .find(|phdr| phdr.program_type().unwrap() == ProgramType::Dynamic)
+        {
+            Some(phdr) => (phdr.offset(), phdr.filesz() as usize),
+            None => (0, 0usize),
+        };
+
         Ok(Self {
             file_path: PathBuf::from(path.as_ref()),
             file,
             header,
             program_headers,
             section_headers,
+            dynamic_addr,
+            dynamic_size,
             dynamic_info: [0; 38],
             string_table,
         })
@@ -172,5 +185,19 @@ impl FileData {
 
     pub fn dynamic_section(&mut self) {
         let entry: Dyn;
+
+        let dyns = Dyn::read(
+            &mut self.file,
+            &self.header,
+            self.dynamic_addr,
+            self.dynamic_size,
+        )
+        .unwrap();
+
+        for d in dyns {
+            unsafe {
+                println!("{:x}", d.value.val);
+            }
+        }
     }
 }

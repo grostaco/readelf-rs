@@ -3,6 +3,8 @@ I have almost no idea what's going on here.
 Directly ported from https://github.com/bminor/binutils-gdb/blob/1eeb0316304f2d4e2c48aa8887e28c936bfe4f4d/include/elf/internal.h
 */
 
+use std::io::{Read, Seek, SeekFrom};
+
 use super::{
     phdr::ProgramType,
     shdr::{ElfShdr, SectionFlag, SectionType},
@@ -24,6 +26,17 @@ fn elf_section_size(shdr: &ElfShdr, segment: &ElfPhdr) -> u64 {
         shdr.size()
     }
 }
+
+// pub fn get_data<R: Read + Seek>(
+//     file: &mut R,
+//     buf: &mut [u8],
+//     offset: u64,
+//     size: u64,
+//     nmemb: usize,
+// ) {
+//     file.seek(SeekFrom::Start(offset));
+//     file.read(buf);
+// }
 
 // Don't touch this unless you know what you are doing
 pub fn elf_section_in_segment(
