@@ -1,6 +1,10 @@
-use std::io::{Read, Seek};
+use std::{
+    io::{self, Read, Seek},
+    mem::{size_of, transmute, MaybeUninit},
+    ptr, slice,
+};
 
-use super::ElfHdr;
+use super::{hdr::ElfClass, ElfHdr};
 
 pub struct DynamicRelocs {
     pub name: &'static str,
@@ -63,11 +67,13 @@ pub enum DynValue {
     Ptr(u64),
 }
 
+#[repr(C)]
 pub enum Dyn32Value {
     Val([u8; 4]),
     Ptr([u8; 4]),
 }
 
+#[repr(C)]
 pub enum Dyn64Value {
     Val([u8; 8]),
     Ptr([u8; 8]),
@@ -112,5 +118,55 @@ pub static DYNAMIC_RELOCATIONS: [DynamicRelocs; 3] = [
 ];
 
 impl Dyn {
-    pub fn read<R: Read + Seek>(file: &mut R, header: &ElfHdr) {}
+    pub fn read<R: Read + Seek>(file: &mut R, hdr: &ElfHdr) -> io::Result<Self> {
+        let mut buf = MaybeUninit::<Elf64Dyn>::uninit();
+
+        unsafe {
+            file.read(slice::from_raw_parts_mut(
+                transmute(buf.as_mut_ptr()),
+                size_of::<Elf64Dyn>(),
+            ))?;
+
+            Ok(match hdr.class().unwrap() {
+                ElfClass::ElfClass64 => (&buf.assume_init()).into(),
+                _ => (&ptr::read(transmute::<_, *const Elf32Dyn>(&buf.assume_init()))).into(),
+            })
+        }
+    }
+}
+
+impl From<&Elf64Dyn> for Dyn {
+    fn from(b: &Elf64Dyn) -> Self {
+        unsafe {
+            Self {
+                tag: ptr::read(ptr::addr_of!(b.tag) as *const u64),
+                value: match b.value {
+                    Dyn64Value::Val(v) => {
+                        DynValue::Val(*transmute::<_, *const u64>(&v as *const u8))
+                    }
+                    Dyn64Value::Ptr(p) => {
+                        DynValue::Val(*transmute::<_, *const u64>(&p as *const u8))
+                    }
+                },
+            }
+        }
+    }
+}
+
+impl From<&Elf32Dyn> for Dyn {
+    fn from(b: &Elf32Dyn) -> Self {
+        unsafe {
+            Self {
+                tag: ptr::read(ptr::addr_of!(b.tag) as *const u32) as u64,
+                value: match b.value {
+                    Dyn32Value::Val(v) => {
+                        DynValue::Val(*transmute::<_, *const u32>(&v as *const u8) as u64)
+                    }
+                    Dyn32Value::Ptr(p) => {
+                        DynValue::Val(*transmute::<_, *const u32>(&p as *const u8) as u64)
+                    }
+                },
+            }
+        }
+    }
 }
