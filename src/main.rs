@@ -68,18 +68,21 @@ struct Args {
     all: bool,
 
     /// Display the program header
-    #[clap(short = 'h', long = "program-headers")]
+    #[clap(short = 'h', long = "file-header")]
     show_headers: bool,
 
     /// Display the section headers
     #[clap(short = 'S', long = "section-headers", alias = "sections")]
     show_sections: bool,
 
-    #[clap(short = 's')]
+    #[clap(short = 's', long = "symbols")]
     show_symbols: bool,
 
-    #[clap(short = 'l')]
+    #[clap(short = 'l', long = "program-headers")]
     show_program_header: bool,
+
+    #[clap(short = 'r', long = "relocs")]
+    show_relocations: bool,
 }
 
 fn main() {
@@ -88,7 +91,7 @@ fn main() {
     let mut stdout = StandardStream::stdout(ColorChoice::Always);
 
     for f in args.files {
-        let mut elf = elf::core::File::new(&f).unwrap();
+        let mut elf = elf::core::FileData::new(&f).unwrap();
 
         if args.show_headers {
             let hdr = elf.header();
@@ -438,6 +441,10 @@ fn main() {
                 }
                 println!()
             }
+        }
+
+        if args.show_relocations {
+            elf.relocations().unwrap();
         }
     }
 }

@@ -1,5 +1,6 @@
 #![allow(clippy::unused_io_amount)]
 pub mod core;
+pub mod dynamic;
 pub mod hdr;
 pub mod internal;
 pub mod phdr;

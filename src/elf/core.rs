@@ -7,6 +7,7 @@ use std::{
 };
 
 use super::{
+    dynamic::{Dyn, DynamicTag, RelaState, DYNAMIC_RELOCATIONS},
     hdr::ElfClass,
     shdr::{ElfShdr, SectionType},
     sym::{Elf32Sym, Elf64Sym, ElfSym},
@@ -14,16 +15,17 @@ use super::{
 };
 
 type Table = Vec<u8>;
-pub struct File {
+pub struct FileData {
     file_path: PathBuf,
     file: fs::File,
     header: ElfHdr,
     program_headers: Vec<ElfPhdr>,
     section_headers: Vec<ElfShdr>,
+    dynamic_info: [u64; DynamicTag::Encoding as usize],
     string_table: Vec<u8>,
 }
 
-impl File {
+impl FileData {
     pub fn new<P>(path: P) -> Result<Self, std::io::Error>
     where
         P: AsRef<Path>,
@@ -41,6 +43,7 @@ impl File {
             header,
             program_headers,
             section_headers,
+            dynamic_info: [0; 38],
             string_table,
         })
     }
@@ -139,5 +142,35 @@ impl File {
     #[inline]
     pub fn string_lookup(&self, index: usize) -> Option<String> {
         self.string_lookup_iter(index).map(|it| it.collect())
+    }
+
+    pub fn relocations(&mut self) -> io::Result<Vec<(String, Table, Vec<ElfSym>)>> {
+        let sym_sections = self
+            .section_headers
+            .iter()
+            .filter(|shdr| {
+                shdr.section_type()
+                    .map(|st| st == SectionType::Rela)
+                    .unwrap_or(false)
+            })
+            .map(|shdr| self.string_lookup(shdr.name() as usize).unwrap())
+            .collect::<String>();
+
+        println!("{}", sym_sections);
+
+        todo!()
+    }
+
+    pub fn process_relocs(&mut self) {
+        for reloc in &DYNAMIC_RELOCATIONS {
+            let is_rela = reloc.rela == RelaState::True;
+            let name = reloc.name;
+
+            //let rel_size =
+        }
+    }
+
+    pub fn dynamic_section(&mut self) {
+        let entry: Dyn;
     }
 }
