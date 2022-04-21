@@ -18,7 +18,7 @@ use super::{
     EI_VERSION,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct ElfHdr {
     pub e_ident: [u8; EI_NINDENT],
     pub e_type: Elf64Half,
@@ -351,6 +351,48 @@ impl ElfHdr {
 
     pub fn downcast_elf64(&self) -> Elf64Hdr {
         todo!()
+    }
+}
+
+impl From<&Elf32Hdr> for ElfHdr {
+    fn from(hdr: &Elf32Hdr) -> Self {
+        Self {
+            e_ident: hdr.e_ident,
+            e_type: hdr.e_type,
+            e_machine: hdr.e_machine,
+            e_version: hdr.e_version,
+            e_entry: hdr.e_entry.to_u64().unwrap(),
+            e_phoff: hdr.e_phoff.to_u64().unwrap(),
+            e_shoff: hdr.e_shoff.to_u64().unwrap(),
+            e_flags: hdr.e_flags,
+            e_ehsize: hdr.e_ehsize,
+            e_phentsize: hdr.e_phentsize,
+            e_phnum: hdr.e_phnum,
+            e_shentsize: hdr.e_shentsize,
+            e_shnum: hdr.e_shnum,
+            e_shstrndx: hdr.e_shstrndx,
+        }
+    }
+}
+
+impl From<&Elf64Hdr> for ElfHdr {
+    fn from(hdr: &Elf64Hdr) -> Self {
+        Self {
+            e_ident: hdr.e_ident,
+            e_type: hdr.e_type,
+            e_machine: hdr.e_machine,
+            e_version: hdr.e_version,
+            e_entry: hdr.e_entry,
+            e_phoff: hdr.e_phoff,
+            e_shoff: hdr.e_shoff,
+            e_flags: hdr.e_flags,
+            e_ehsize: hdr.e_ehsize,
+            e_phentsize: hdr.e_phentsize,
+            e_phnum: hdr.e_phnum,
+            e_shentsize: hdr.e_shentsize,
+            e_shnum: hdr.e_shnum,
+            e_shstrndx: hdr.e_shstrndx,
+        }
     }
 }
 

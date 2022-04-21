@@ -1,10 +1,17 @@
-use std::ptr;
+use std::{
+    io::{Read, Seek, SeekFrom},
+    ptr,
+};
 
 use num::ToPrimitive;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
 
-use super::{Elf32Addr, Elf32Half, Elf32Word, Elf64Addr, Elf64Half, Elf64Word, Elf64Xword};
+use super::{
+    internal::get_data,
+    shdr::{ElfShdr, SectionType},
+    Elf32Addr, Elf32Half, Elf32Word, Elf64Addr, Elf64Half, Elf64Word, Elf64Xword, ElfHdr,
+};
 
 #[repr(C, packed)]
 pub struct Elf32Sym {
@@ -74,6 +81,41 @@ pub enum SymbolVis {
 }
 
 impl ElfSym {
+    pub fn read_symbols<R: Seek + Read>(
+        file: &mut R,
+        hdr: &ElfHdr,
+        shdr: &ElfShdr,
+        sections: &[ElfShdr],
+    ) -> Option<Vec<Self>> {
+        if shdr.size() == 0 {
+            return None;
+        }
+
+        let nelem = shdr.size() / shdr.entsize();
+
+        let syms = unsafe {
+            get_data::<_, Elf32Sym, Elf64Sym, ElfSym>(
+                file,
+                hdr,
+                (shdr.size() / shdr.entsize()) as usize,
+                SeekFrom::Start(shdr.offset()),
+            )
+            .unwrap()
+        };
+
+        let symtab_shndx = sections.iter().filter(|shdr| {
+            shdr.section_type()
+                .map(|ty| ty == SectionType::SymTabShndx)
+                .unwrap_or(false)
+        });
+
+        // for entry in symtab_shndx {
+        //     if entry.link() != shdr
+        // }
+
+        todo!()
+    }
+
     pub fn name(&self) -> Elf64Word {
         self.name
     }
@@ -129,48 +171,32 @@ impl SymbolVis {
 }
 
 // See https://github.com/rust-lang/rust/issues/82523
-impl TryFrom<Elf32Sym> for ElfSym {
-    type Error = ();
-
-    fn try_from(sym: Elf32Sym) -> Result<Self, ()> {
+impl From<Elf32Sym> for ElfSym {
+    fn from(sym: Elf32Sym) -> Self {
         unsafe {
-            Ok(Self {
+            Self {
                 name: sym.name,
-                value: ptr::addr_of!(sym.value)
-                    .read_unaligned()
-                    .to_u64()
-                    .ok_or(())?,
-                size: ptr::addr_of!(sym.size)
-                    .read_unaligned()
-                    .to_u64()
-                    .ok_or(())?,
+                value: ptr::addr_of!(sym.value).read_unaligned().to_u64().unwrap(),
+                size: ptr::addr_of!(sym.size).read_unaligned().to_u64().unwrap(),
                 shndx: sym.shndx,
                 info: sym.info,
                 other: sym.other,
-            })
+            }
         }
     }
 }
 
-impl TryFrom<&Elf32Sym> for ElfSym {
-    type Error = ();
-
-    fn try_from(sym: &Elf32Sym) -> Result<Self, ()> {
+impl From<&Elf32Sym> for ElfSym {
+    fn from(sym: &Elf32Sym) -> Self {
         unsafe {
-            Ok(Self {
+            Self {
                 name: sym.name,
-                value: ptr::addr_of!(sym.value)
-                    .read_unaligned()
-                    .to_u64()
-                    .ok_or(())?,
-                size: ptr::addr_of!(sym.size)
-                    .read_unaligned()
-                    .to_u64()
-                    .ok_or(())?,
+                value: ptr::addr_of!(sym.value).read_unaligned().to_u64().unwrap(),
+                size: ptr::addr_of!(sym.size).read_unaligned().to_u64().unwrap(),
                 info: sym.info,
                 shndx: sym.shndx,
                 other: sym.other,
-            })
+            }
         }
     }
 }

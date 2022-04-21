@@ -15,7 +15,7 @@ use super::{
     ElfHdr,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct ElfShdr {
     name: Elf64Word,
     section_type: Elf64Word,
@@ -51,16 +51,16 @@ pub struct Elf32Shdr {
 #[repr(C)]
 #[derive(Debug)]
 pub struct Elf64Shdr {
-    name: Elf64Word,
-    section_type: Elf64Word,
-    flags: Elf64Xword,
-    addr: Elf64Addr,
-    offset: Elf64Off,
-    size: Elf64Xword,
-    link: Elf64Word,
-    info: Elf64Word,
-    addralign: Elf64Xword,
-    entsize: Elf64Xword,
+    pub name: Elf64Word,
+    pub section_type: Elf64Word,
+    pub flags: Elf64Xword,
+    pub addr: Elf64Addr,
+    pub offset: Elf64Off,
+    pub size: Elf64Xword,
+    pub link: Elf64Word,
+    pub info: Elf64Word,
+    pub addralign: Elf64Xword,
+    pub entsize: Elf64Xword,
 }
 
 impl ElfShdr {
@@ -325,6 +325,9 @@ pub enum SectionType {
     DynSym = 0xB,
     InitArray = 0xE,
     FiniArray = 0xF,
+    PreInitArray = 0x10,
+    Group = 0x11,
+    SymTabShndx = 0x12,
     LoProc = 0x70000000,
     HiProc = 0x7FFFFFFF,
     LoUser = 0x80000000,

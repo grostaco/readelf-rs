@@ -7,13 +7,16 @@ use std::{
 };
 
 use super::{
-    dynamic::{Dyn, DynamicTag, RelaState, DYNAMIC_RELOCATIONS},
-    hdr::ElfClass,
+    dynamic::{Dyn, DynamicTag},
+    hdr::{Elf32Hdr, Elf64Hdr, ElfClass},
+    internal::get_data,
     phdr::ProgramType,
     shdr::{ElfShdr, SectionType},
     sym::{Elf32Sym, Elf64Sym, ElfSym},
     ElfHdr, ElfPhdr,
 };
+
+use num_traits::FromPrimitive;
 
 type Table = Vec<u8>;
 pub struct FileData {
@@ -175,18 +178,119 @@ impl FileData {
     }
 
     pub fn process_relocs(&mut self) {
-        for reloc in &DYNAMIC_RELOCATIONS {
-            let is_rela = reloc.rela == RelaState::True;
-            let name = reloc.name;
+        self.process_dynamic_section();
 
-            //let rel_size =
+        for shdr in self.section_headers.iter().filter(|shdr| {
+            matches!(
+                shdr.section_type().unwrap(),
+                SectionType::Rela | SectionType::Rel
+            )
+        }) {
+            print!("\nRelocation section ");
+            print!("{}", self.string_lookup(shdr.name() as usize).unwrap());
+
+            let rel_offset = shdr.offset();
+            let rel_size = shdr.size();
+            let num_rela = rel_size / shdr.entsize();
+
+            println!(
+                " at offset 0x{:x} contains {} entries:",
+                rel_offset, num_rela
+            );
+
+            let is_rela = shdr
+                .section_type()
+                .map(|stype| stype == SectionType::Rela)
+                .unwrap_or(false);
+
+            if shdr.link() != 0 && shdr.link() < self.header().e_shnum.into() {
+                let symsec = &self.section_headers()[shdr.link() as usize];
+                if !matches!(
+                    symsec.section_type().unwrap(),
+                    SectionType::SymTab | SectionType::DynSym
+                ) {
+                    continue;
+                }
+            }
+
+            let syms = unsafe {
+                get_data::<_, Elf32Sym, Elf64Sym, ElfSym>(
+                    &mut self.file,
+                    &self.header,
+                    (shdr.size() / shdr.entsize()) as usize,
+                    SeekFrom::Start(shdr.offset()),
+                )
+                .unwrap()
+            };
+
+            if shdr.link() != 0 && shdr.link() < self.header.e_shnum.into() {}
+        }
+
+        // for reloc in &DYNAMIC_RELOCATIONS {
+        //     let is_rela = reloc.rela == RelaState::True;
+        //     let name = reloc.name;
+
+        //     let rel_size = self.dynamic_info[reloc.size as usize];
+        //     let rel_offset = self.dynamic_info[reloc.reloc as usize];
+
+        //     println!("\nRelocation section");
+
+        //     self.string_lookup()
+
+        // println!(
+        //     "{} {} {} {}",
+        //     reloc.size as usize, reloc.reloc as usize, rel_size, rel_offset
+        // );
+    }
+
+    pub fn process_dynamic_section(&mut self) {
+        let dynamic_section = self.dynamic_section();
+
+        for entry in &dynamic_section {
+            if entry.tag == DynamicTag::SymTab as u64 {
+                self.dynamic_info[DynamicTag::SymTab as usize] = unsafe { entry.value.val };
+            }
+
+            if entry.tag == DynamicTag::StrTab as u64 {
+                self.dynamic_info[DynamicTag::StrTab as usize] = unsafe { entry.value.val };
+            }
+
+            match DynamicTag::from_u64(entry.tag).unwrap() {
+                DynamicTag::Null
+                | DynamicTag::Needed
+                | DynamicTag::PltGot
+                | DynamicTag::Hash
+                | DynamicTag::StrTab
+                | DynamicTag::Rela
+                | DynamicTag::RelaSz
+                | DynamicTag::Init
+                | DynamicTag::Fini
+                | DynamicTag::SoName
+                | DynamicTag::RPath
+                | DynamicTag::Symbolic
+                | DynamicTag::Rel
+                | DynamicTag::Debug
+                | DynamicTag::TextRel
+                | DynamicTag::JmpRel
+                | DynamicTag::RunPath
+                | DynamicTag::PltRelSz
+                | DynamicTag::RelaEnt
+                | DynamicTag::RelEnt => {
+                    // println!(
+                    //     "Woo! {} {} {}",
+                    //     entry.tag,
+                    //     DynamicTag::Rela as usize,
+                    //     unsafe { entry.value.val }
+                    // );
+                    self.dynamic_info[entry.tag as usize] = unsafe { entry.value.val }
+                }
+                _ => {}
+            }
         }
     }
 
-    pub fn dynamic_section(&mut self) {
-        let entry: Dyn;
-
-        let dyns = Dyn::read(
+    pub fn dynamic_section(&mut self) -> Vec<Dyn> {
+        let mut dyns = Dyn::read(
             &mut self.file,
             &self.header,
             self.dynamic_addr,
@@ -194,10 +298,8 @@ impl FileData {
         )
         .unwrap();
 
-        for d in dyns {
-            unsafe {
-                println!("{:x}", d.value.val);
-            }
-        }
+        dyns.drain(..)
+            .take_while(|d| d.tag != DynamicTag::Null as u64)
+            .collect()
     }
 }

@@ -445,7 +445,7 @@ fn main() {
 
         if args.show_relocations {
             //elf.relocations().unwrap();
-            elf.dynamic_section();
+            elf.process_relocs();
         }
     }
 }

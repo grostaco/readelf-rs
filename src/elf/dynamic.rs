@@ -5,6 +5,8 @@ use std::{
     ptr,
 };
 
+use num_derive::FromPrimitive;
+
 use super::{hdr::ElfClass, ElfHdr};
 
 pub struct DynamicRelocs {
@@ -14,12 +16,13 @@ pub struct DynamicRelocs {
     pub rela: RelaState,
 }
 
+#[derive(FromPrimitive, Clone, Copy)]
 #[repr(usize)]
 pub enum DynamicTag {
     Null,
     Needed,
     PltRelSz,
-    PltGod,
+    PltGot,
     Hash,
     StrTab,
     SymTab,
@@ -54,6 +57,42 @@ pub enum DynamicTag {
     RelR,
     RelrEnt,
     Encoding,
+
+    Valrnglo = 0x6ffffd00,
+    GnuFlags1 = 0x6ffffdf4,
+    GnuPrelinked = 0x6ffffdf5,
+    GnuConflictsz = 0x6ffffdf6,
+    GnuLiblistsz = 0x6ffffdf7,
+    Checksum = 0x6ffffdf8,
+    PltPadSz = 0x6ffffdf9,
+    MoveEnt = 0x6ffffdfa,
+    MoveSz = 0x6ffffdfb,
+    Feature = 0x6ffffdfc,
+    Posflag1 = 0x6ffffdfd,
+    Syminsz = 0x6ffffdfe,
+    SymIEntOrValRNGHI = 0x6ffffdff,
+    Addrrnglo = 0x6ffffe00,
+    GnuHash = 0x6ffffef5,
+    TlsdescPlt = 0x6ffffef6,
+    TlsdescGot = 0x6ffffef7,
+    GnuConflict = 0x6ffffef8,
+    GnuLiblist = 0x6ffffef9,
+    Config = 0x6ffffefa,
+    Depaudit = 0x6ffffefb,
+    Audit = 0x6ffffefc,
+    PltPad = 0x6ffffefd,
+    MoveTab = 0x6ffffefe,
+    SymInfoOrAddrrnGHI = 0x6ffffeff,
+    Relacount = 0x6ffffff9,
+    Relcount = 0x6ffffffa,
+    Flags1 = 0x6ffffffb,
+    Verdef = 0x6ffffffc,
+    Verdefnum = 0x6ffffffd,
+    Verneed = 0x6ffffffe,
+    Verneednum = 0x6fffffff,
+    Versym = 0x6ffffff0,
+    Loproc = 0x70000000,
+    Hiproc = 0x7fffffff,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -133,13 +172,7 @@ impl Dyn {
             let buf = ptr::slice_from_raw_parts_mut(_ptr, dynamic_size);
 
             file.seek(SeekFrom::Start(dynamic_addr)).unwrap();
-            let bytes_read = file.read(&mut *buf)?;
-            println!(
-                "Read {} bytes from {} expected with type size {}",
-                bytes_read,
-                dynamic_size,
-                size_of::<Elf64Dyn>()
-            );
+            file.read(&mut *buf)?;
 
             let result = Ok(match hdr.class().unwrap() {
                 ElfClass::ElfClass64 => (*ptr::slice_from_raw_parts(
