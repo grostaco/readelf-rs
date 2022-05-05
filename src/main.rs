@@ -4,6 +4,7 @@ use clap::Parser;
 
 #[allow(dead_code)]
 mod elf;
+use elf::shdr::{ElfShdr, SectionType};
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 use crate::elf::{
@@ -75,14 +76,21 @@ struct Args {
     #[clap(short = 'S', long = "section-headers", alias = "sections")]
     show_sections: bool,
 
-    #[clap(short = 's', long = "symbols")]
+    /// Display the symbol table
+    #[clap(short = 's', long = "syms")]
     show_symbols: bool,
 
+    /// Display the program headers
     #[clap(short = 'l', long = "program-headers")]
     show_program_header: bool,
 
+    /// Display the relocations (if present)
     #[clap(short = 'r', long = "relocs")]
     show_relocations: bool,
+
+    /// Display the dynamic symbol table
+    #[clap(short = 'd', long = "dyn-syms")]
+    show_dyn_syms: bool,
 }
 
 fn main() {
@@ -446,6 +454,12 @@ fn main() {
         if args.show_relocations {
             //elf.relocations().unwrap();
             elf.process_relocs();
+        }
+
+        if args.show_dyn_syms {
+            println!("Symbol table '.dynsym' contains 24 entries:");
+            println!("   Num:    Value          Size Type    Bind   Vis      Ndx Name");
+            elf.dynamic_symbols().unwrap();
         }
     }
 }

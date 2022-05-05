@@ -76,6 +76,24 @@ impl FileData {
         &self.program_headers
     }
 
+    pub fn dynamic_symbols(&mut self) -> Option<io::Result<Vec<ElfSym>>> {
+        if let Some(dyn_section) = self.section_headers.iter().find(|shdr| {
+            shdr.section_type()
+                .map_or(false, |stype| stype == SectionType::DynSym)
+        }) {
+            let syms = ElfSym::read_symbols(
+                &mut self.file,
+                &self.header,
+                dyn_section,
+                &self.section_headers,
+            )?;
+
+            return Some(syms);
+        }
+
+        None
+    }
+
     // Please for the love of god someone rewrite this
     // This is a powder keg waiting to explode
     pub fn table_symbols(&mut self) -> io::Result<Vec<(String, Table, Vec<ElfSym>)>> {
@@ -223,7 +241,9 @@ impl FileData {
                 .unwrap()
             };
 
-            if shdr.link() != 0 && shdr.link() < self.header.e_shnum.into() {}
+            if shdr.link() != 0 && shdr.link() < self.header.e_shnum.into() {
+                ElfSym::read_symbols(&mut self.file, &self.header, shdr, &self.section_headers);
+            }
         }
 
         // for reloc in &DYNAMIC_RELOCATIONS {

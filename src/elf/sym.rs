@@ -1,5 +1,5 @@
 use std::{
-    io::{Read, Seek, SeekFrom},
+    io::{self, Read, Seek, SeekFrom},
     ptr,
 };
 
@@ -86,7 +86,7 @@ impl ElfSym {
         hdr: &ElfHdr,
         shdr: &ElfShdr,
         sections: &[ElfShdr],
-    ) -> Option<Vec<Self>> {
+    ) -> Option<io::Result<Vec<Self>>> {
         if shdr.size() == 0 {
             return None;
         }
@@ -94,26 +94,30 @@ impl ElfSym {
         let nelem = shdr.size() / shdr.entsize();
 
         let syms = unsafe {
-            get_data::<_, Elf32Sym, Elf64Sym, ElfSym>(
+            Some(get_data::<_, Elf32Sym, Elf64Sym, ElfSym>(
                 file,
                 hdr,
                 (shdr.size() / shdr.entsize()) as usize,
                 SeekFrom::Start(shdr.offset()),
-            )
-            .unwrap()
+            ))?
         };
 
-        let symtab_shndx = sections.iter().filter(|shdr| {
-            shdr.section_type()
-                .map(|ty| ty == SectionType::SymTabShndx)
-                .unwrap_or(false)
-        });
+        Some(syms)
+
+        // println!("{:#?}", syms);
+
+        // let symtab_shndx = sections.iter().filter(|shdr| {
+        //     shdr.section_type()
+        //         .map(|ty| ty == SectionType::SymTabShndx)
+        //         .unwrap_or(false)
+        // });
 
         // for entry in symtab_shndx {
-        //     if entry.link() != shdr
+        //     println!("A?");
+        //     println!("{}", entry.link());
         // }
 
-        todo!()
+        // None
     }
 
     pub fn name(&self) -> Elf64Word {
