@@ -7,6 +7,7 @@ A simple readelf(1) implementation in Rust for a university project.
 - [x] Dump program headers
 - [x] Dump symbols
 - [x] Dump sections
+- [x] Dump dynamic symbols
 - [ ] Dump relocation symbols
 
 # Why not to use this

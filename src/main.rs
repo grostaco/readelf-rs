@@ -459,7 +459,42 @@ fn main() {
         if args.show_dyn_syms {
             println!("Symbol table '.dynsym' contains 24 entries:");
             println!("   Num:    Value          Size Type    Bind   Vis      Ndx Name");
-            elf.dynamic_symbols().unwrap();
+
+            let dyn_syms = match elf.dynamic_symbols() {
+                Some(Ok(syms)) => syms,
+                _ => panic!("Cannot load dynamic symbols"),
+            };
+
+            let table = elf
+                .table_symbols()
+                .unwrap()
+                .iter()
+                .find(|(name, symbols, syms)| name == ".dynsym")
+                .unwrap()
+                .clone();
+            for (i, sym) in dyn_syms.iter().enumerate() {
+                println!(
+                    "{:>6}: {:016} {:>5} {:<8}{:<7}{:<8} {} {}",
+                    i,
+                    sym.value(),
+                    sym.size(),
+                    sym.symbol_type().unwrap().display(),
+                    sym.binding().unwrap().display(),
+                    sym.visibility().unwrap().display(),
+                    match sym.shndx() {
+                        0 => "UND".to_string(),
+                        65521 => "ABS".to_string(),
+                        i => i.to_string(),
+                    },
+                    table
+                        .1
+                        .iter()
+                        .skip(sym.name() as usize)
+                        .take_while(|&&p| p != 0)
+                        .map(|&c| c as char)
+                        .collect::<String>(),
+                );
+            }
         }
     }
 }

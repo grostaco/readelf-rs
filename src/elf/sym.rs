@@ -8,9 +8,8 @@ use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
 
 use super::{
-    internal::get_data,
-    shdr::{ElfShdr, SectionType},
-    Elf32Addr, Elf32Half, Elf32Word, Elf64Addr, Elf64Half, Elf64Word, Elf64Xword, ElfHdr,
+    internal::get_data, shdr::ElfShdr, Elf32Addr, Elf32Half, Elf32Word, Elf64Addr, Elf64Half,
+    Elf64Word, Elf64Xword, ElfHdr,
 };
 
 #[repr(C, packed)]
