@@ -8,7 +8,7 @@ use std::{
 
 use super::{
     dynamic::{Dyn, DynamicTag},
-    hdr::{Elf32Hdr, Elf64Hdr, ElfClass},
+    hdr::ElfClass,
     internal::get_data,
     phdr::ProgramType,
     shdr::{ElfShdr, SectionType},
@@ -216,30 +216,47 @@ impl FileData {
                 rel_offset, num_rela
             );
 
-            let is_rela = shdr
-                .section_type()
-                .map(|stype| stype == SectionType::Rela)
-                .unwrap_or(false);
-
             if shdr.link() != 0 && shdr.link() < self.header().e_shnum.into() {
-                let symsec = &self.section_headers()[shdr.link() as usize];
+                let symsec = self.section_headers()[shdr.link() as usize];
                 if !matches!(
                     symsec.section_type().unwrap(),
                     SectionType::SymTab | SectionType::DynSym
                 ) {
                     continue;
                 }
-            }
 
-            let syms = unsafe {
-                get_data::<_, Elf32Sym, Elf64Sym, ElfSym>(
+                println!("{}", self.string_lookup(symsec.name() as usize).unwrap());
+
+                let table = ElfShdr::get_data(
                     &mut self.file,
                     &self.header,
-                    (shdr.size() / shdr.entsize()) as usize,
-                    SeekFrom::Start(shdr.offset()),
+                    symsec.link().into(),
+                    self.header.e_shoff,
                 )
-                .unwrap()
-            };
+                .unwrap();
+
+                let syms = unsafe {
+                    get_data::<_, Elf32Sym, Elf64Sym, ElfSym>(
+                        &mut self.file,
+                        &self.header,
+                        (shdr.size() / shdr.entsize()) as usize,
+                        SeekFrom::Start(symsec.offset()),
+                    )
+                    .unwrap()
+                };
+
+                for sym in syms {
+                    println!(
+                        "{:#?}",
+                        table
+                            .iter()
+                            .skip(sym.name() as usize)
+                            .take_while(|&&p| p != 0)
+                            .map(|i| *i as char)
+                            .collect::<String>()
+                    );
+                }
+            }
 
             if shdr.link() != 0 && shdr.link() < self.header.e_shnum.into() {
                 ElfSym::read_symbols(&mut self.file, &self.header, shdr, &self.section_headers);
@@ -296,12 +313,6 @@ impl FileData {
                 | DynamicTag::PltRelSz
                 | DynamicTag::RelaEnt
                 | DynamicTag::RelEnt => {
-                    // println!(
-                    //     "Woo! {} {} {}",
-                    //     entry.tag,
-                    //     DynamicTag::Rela as usize,
-                    //     unsafe { entry.value.val }
-                    // );
                     self.dynamic_info[entry.tag as usize] = unsafe { entry.value.val }
                 }
                 _ => {}
