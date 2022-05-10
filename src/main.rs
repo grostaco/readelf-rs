@@ -2,12 +2,13 @@
 
 use clap::Parser;
 
+mod display;
 #[allow(dead_code)]
 mod elf;
-use elf::shdr::{ElfShdr, SectionType};
+// use elf::shdr::{ElfShdr, SectionType};
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
-use crate::elf::{
+use elf::{
     hdr::{ElfClass, Endian},
     internal::elf_section_in_segment,
     shdr::SectionFlag,
