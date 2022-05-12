@@ -5,10 +5,8 @@ This is where all the evil lies
 */
 
 use std::{
-    alloc::{alloc, dealloc, Layout},
     io::{self, Read, Seek, SeekFrom},
-    mem::{self, align_of, size_of, MaybeUninit},
-    ptr, slice,
+    mem, slice,
 };
 
 use super::{
@@ -34,85 +32,7 @@ fn elf_section_size(shdr: &ElfShdr, segment: &ElfPhdr) -> u64 {
     }
 }
 
-// let layout = Layout::from_size_align(dynamic_size, align_of::<Elf64Dyn>()).unwrap();
-
-// unsafe {
-//     let mut _ptr = alloc(layout);
-
-//     let buf = ptr::slice_from_raw_parts_mut(_ptr, dynamic_size);
-
-//     file.seek(SeekFrom::Start(dynamic_addr)).unwrap();
-//     file.read(&mut *buf)?;
-
-//     let result = Ok(match hdr.class().unwrap() {
-//         ElfClass::ElfClass64 => (*ptr::slice_from_raw_parts(
-//             _ptr as *const Elf64Dyn,
-//             dynamic_size / size_of::<Elf64Dyn>(),
-//         ))
-//         .iter()
-//         .map(Dyn::from)
-//         .collect(),
-//         _ => (*ptr::slice_from_raw_parts(
-//             _ptr as *const Elf32Dyn,
-//             dynamic_size / size_of::<Elf32Dyn>(),
-//         ))
-//         .iter()
-//         .map(Dyn::from)
-//         .collect(),
-//     });
-
-//     dealloc(_ptr, layout);
-//     result
-
-// very dangerous function. Unless you are me, please avoid using this or exercise extreme caution (test the code as soon as you use this function)
-// A few notes:
-//  E64 must be larger than or equal to E32
-//  E32 must have equal or less alignment than E64
-//  E32 and E64 must be repr(C)
-// If something goes wrong, check these ^
-// pub unsafe fn get_data<'a, R: Read + Seek, E32, E64, E>(
-//     file: &mut R,
-//     hdr: &ElfHdr,
-//     nmemb: usize,
-//     offset: SeekFrom,
-// ) -> io::Result<Vec<E>>
-// where
-//     E32: 'static,
-//     E64: 'static,
-//     E: From<&'a E32>,
-//     E: From<&'a E64>,
-// {
-//     let layout = Layout::from_size_align(size_of::<E64>() * nmemb, align_of::<E64>()).unwrap();
-//     let _ptr = alloc(layout);
-//     let buf = ptr::slice_from_raw_parts_mut(_ptr, size_of::<E64>() * nmemb);
-
-//     file.seek(offset)?;
-//     let bytes_read = file.read(&mut *buf)?;
-
-//     if bytes_read != size_of::<E64>() * nmemb && bytes_read != size_of::<E32>() * nmemb {
-//         panic!(
-//             "get_data failed to read equal to the expected E64 and E32, got {} bytes expected {} or {} bytes",
-//             bytes_read, size_of::<E64>() * nmemb, size_of::<E32>() * nmemb
-//         );
-//     }
-
-//     let result = Ok(match hdr.class().unwrap() {
-//         ElfClass::ElfClass64 => (*ptr::slice_from_raw_parts(_ptr as *const E64, nmemb))
-//             .into_iter()
-//             .map(Into::into)
-//             .collect(),
-//         ElfClass::ElfClass32 => (*ptr::slice_from_raw_parts(_ptr as *const E32, nmemb))
-//             .into_iter()
-//             .map(Into::into)
-//             .collect(),
-//         ElfClass::None => panic!("Cannot handle ELF header with None class"),
-//     });
-
-//     dealloc(_ptr, layout);
-//     result
-// }
-
-pub fn get_data<'a, R: Read + Seek, E32, E64, E>(
+pub unsafe fn get_data<'a, R: Read + Seek, E32, E64, E>(
     file: &mut R,
     hdr: &ElfHdr,
     nmemb: usize,
@@ -130,34 +50,31 @@ where
         ElfClass::ElfClass32 => {
             let mut buf = Vec::<E32>::with_capacity(nmemb);
 
-            unsafe {
-                let buf_ptr = buf.as_mut_ptr();
+            let buf_ptr = buf.as_mut_ptr();
 
-                file.read_exact(slice::from_raw_parts_mut(
-                    mem::transmute(buf_ptr),
-                    nmemb * mem::size_of::<E32>(),
-                ))?;
+            file.read_exact(slice::from_raw_parts_mut(
+                mem::transmute(buf_ptr),
+                nmemb * mem::size_of::<E32>(),
+            ))?;
 
-                Ok(slice::from_raw_parts(buf_ptr, nmemb)
-                    .iter()
-                    .map(Into::into)
-                    .collect())
-            }
+            Ok(slice::from_raw_parts(buf_ptr, nmemb)
+                .iter()
+                .map(Into::into)
+                .collect())
         }
         ElfClass::ElfClass64 => {
             let mut buf = Vec::<E64>::with_capacity(nmemb);
             let buf_ptr = buf.as_mut_ptr();
-            unsafe {
-                file.read_exact(slice::from_raw_parts_mut(
-                    mem::transmute(buf_ptr),
-                    nmemb * mem::size_of::<E64>(),
-                ))?;
 
-                Ok(slice::from_raw_parts(buf_ptr, nmemb)
-                    .iter()
-                    .map(Into::into)
-                    .collect())
-            }
+            file.read_exact(slice::from_raw_parts_mut(
+                mem::transmute(buf_ptr),
+                nmemb * mem::size_of::<E64>(),
+            ))?;
+
+            Ok(slice::from_raw_parts(buf_ptr, nmemb)
+                .iter()
+                .map(Into::into)
+                .collect())
         }
         ElfClass::None => panic!("Unsupported elf class"),
     }

@@ -5,7 +5,6 @@ use clap::Parser;
 mod display;
 #[allow(dead_code)]
 mod elf;
-// use elf::shdr::{ElfShdr, SectionType};
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 use elf::{
@@ -453,7 +452,6 @@ fn main() {
         }
 
         if args.show_relocations {
-            //elf.relocations().unwrap();
             elf.process_relocs();
         }
 
@@ -470,7 +468,7 @@ fn main() {
                 .table_symbols()
                 .unwrap()
                 .iter()
-                .find(|(name, symbols, syms)| name == ".dynsym")
+                .find(|(name, _, _)| name == ".dynsym")
                 .unwrap()
                 .clone();
             for (i, sym) in dyn_syms.iter().enumerate() {

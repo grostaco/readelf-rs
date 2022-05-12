@@ -6,6 +6,8 @@ use std::{
     slice,
 };
 
+use crate::elf::ver::ElfVerdef;
+
 use super::{
     dynamic::{Dyn, DynamicTag},
     hdr::ElfClass,
@@ -85,7 +87,7 @@ impl FileData {
                 &mut self.file,
                 &self.header,
                 dyn_section,
-                &self.section_headers,
+                //&self.section_headers,
             )?;
 
             return Some(syms);
@@ -204,6 +206,9 @@ impl FileData {
                 SectionType::Rela | SectionType::Rel
             )
         }) {
+            let vers =
+                ElfVerdef::read(&mut self.file, &self.header, &self.section_headers).unwrap();
+            println!("{:#?}", vers);
             print!("\nRelocation section ");
             print!("{}", self.string_lookup(shdr.name() as usize).unwrap());
 
@@ -225,7 +230,7 @@ impl FileData {
                     continue;
                 }
 
-                println!("{}", self.string_lookup(symsec.name() as usize).unwrap());
+                //println!("{}", self.string_lookup(symsec.name() as usize).unwrap());
 
                 let table = ElfShdr::get_data(
                     &mut self.file,
@@ -247,19 +252,24 @@ impl FileData {
 
                 for sym in syms {
                     println!(
-                        "{:#?}",
+                        "{}",
                         table
                             .iter()
                             .skip(sym.name() as usize)
                             .take_while(|&&p| p != 0)
                             .map(|i| *i as char)
-                            .collect::<String>()
+                            .collect::<String>(),
                     );
                 }
             }
 
             if shdr.link() != 0 && shdr.link() < self.header.e_shnum.into() {
-                ElfSym::read_symbols(&mut self.file, &self.header, shdr, &self.section_headers);
+                ElfSym::read_symbols(
+                    &mut self.file,
+                    &self.header,
+                    shdr,
+                    //&self.section_headers
+                );
             }
         }
 

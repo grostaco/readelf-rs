@@ -6,6 +6,7 @@ pub mod internal;
 pub mod phdr;
 pub mod shdr;
 pub mod sym;
+pub mod ver;
 
 pub use hdr::ElfHdr;
 pub use phdr::ElfPhdr;

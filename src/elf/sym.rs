@@ -84,13 +84,11 @@ impl ElfSym {
         file: &mut R,
         hdr: &ElfHdr,
         shdr: &ElfShdr,
-        sections: &[ElfShdr],
+        //sections: &[ElfShdr],
     ) -> Option<io::Result<Vec<Self>>> {
         if shdr.size() == 0 {
             return None;
         }
-
-        let nelem = shdr.size() / shdr.entsize();
 
         let syms = unsafe {
             Some(get_data::<_, Elf32Sym, Elf64Sym, ElfSym>(
@@ -102,21 +100,6 @@ impl ElfSym {
         };
 
         Some(syms)
-
-        // println!("{:#?}", syms);
-
-        // let symtab_shndx = sections.iter().filter(|shdr| {
-        //     shdr.section_type()
-        //         .map(|ty| ty == SectionType::SymTabShndx)
-        //         .unwrap_or(false)
-        // });
-
-        // for entry in symtab_shndx {
-        //     println!("A?");
-        //     println!("{}", entry.link());
-        // }
-
-        // None
     }
 
     pub fn name(&self) -> Elf64Word {
