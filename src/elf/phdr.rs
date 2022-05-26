@@ -45,13 +45,33 @@ pub struct ProgramFlags {
 
 #[derive(Debug)]
 pub struct ElfPhdr {
+    /// This segment's type
     p_type: Elf64Word,
+    /// Offset from the beginning of the file to the segment (bytes)
     p_offset: Elf64Off,
+    /// Virtual address offset of the first byte to the segment (bytes)
     p_vaddr: Elf64Addr,
+    /// Physical address  offset of the first byte to this segment (bytes)
     p_paddr: Elf64Addr,
+    /// Program header flags
+    ///
+    /// | Name | Value |
+    /// |---------|---|
+    /// | [`ProgramType::Null`] | 0 |
+    /// | [`ProgramType::Load`] | 1 |
+    /// | [`ProgramType::Dynamic`] | 2 |
+    /// | [`ProgramType::Interp`] | 3 |
+    /// | [`ProgramType::Note`] | 4 |
+    /// | [`ProgramType::ShLib`] | 5 |
+    /// | [`ProgramType::Phdr`] | 6 |
+    /// | [`ProgramType::LoProc`] | 0x70000000 |
+    /// | [`ProgramType::HiProc`] | 0x7fffffff |
     p_flags: Elf64Xword,
+    /// The number of bytes in the file image of the segment, may be zero
     p_filesz: Elf64Xword,
+    /// The number of bytes in the memory image of the segmnet, may be zero
     p_memsz: Elf64Xword,
+    /// The alignment for `p_vaddr` and `p_offset`
     p_align: Elf64Xword,
 }
 

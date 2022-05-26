@@ -250,6 +250,9 @@ dependencies = [
  "num",
  "num-derive",
  "num-traits",
+ "proc-macro2",
+ "quote",
+ "syn",
  "termcolor",
 ]
 

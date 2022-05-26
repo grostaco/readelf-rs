@@ -34,11 +34,17 @@ pub struct Elf64Sym {
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct ElfSym {
+    /// The index into the object file's symbol string table
     name: Elf64Word,
+    /// Value of the associated symbol
     value: Elf64Addr,
+    /// Number of bytes in the object
     size: Elf64Xword,
+    /// The relevant section header table index
     shndx: Elf64Half,
+    /// Symbol's type and binding attributes
     info: u8,
+    /// Zero, has no meaning currently.
     other: u8,
 }
 
@@ -114,8 +120,9 @@ impl ElfSym {
         self.size
     }
 
-    // pub fn info(&self) -> Option<SymbolType> {
-    // }
+    pub fn info(&self) -> u8 {
+        self.info
+    }
 
     pub fn binding(&self) -> Option<SymbolBinding> {
         SymbolBinding::from_u8(self.info >> 4)

@@ -20,19 +20,33 @@ use super::{
 
 #[derive(Debug, Clone, Copy)]
 pub struct ElfHdr {
+    /// Machine-independent data
     pub e_ident: [u8; EI_NINDENT],
+    /// Object file type
     pub e_type: Elf64Half,
+    /// Required architecture
     pub e_machine: Elf64Half,
+    /// File version
     pub e_version: Elf64Word,
+    /// Entry point
     pub e_entry: Elf64Addr,
+    /// Program header table's offset (bytes)
     pub e_phoff: Elf64Off,
+    /// Section header table's offset (bytes)
     pub e_shoff: Elf64Off,
+    /// Processor-specific flags
     pub e_flags: Elf64Word,
+    /// ELF's header size (bytes)
     pub e_ehsize: Elf64Half,
+    /// The size of a program header entry (bytes)
     pub e_phentsize: Elf64Half,
+    /// Number of entries in the program header table
     pub e_phnum: Elf64Half,
+    /// The size of a section entry (bytes)
     pub e_shentsize: Elf64Half,
+    /// Number of entries in the section header table
     pub e_shnum: Elf64Half,
+    /// Section header table index for the string table
     pub e_shstrndx: Elf64Half,
 }
 

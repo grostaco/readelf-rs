@@ -75,7 +75,7 @@ mod test {
 
     use crate::elf::shdr::ElfShdr;
 
-    use super::{Entry, Table};
+    use super::Entry;
 
     impl Entry for ElfShdr {
         fn header(&self) -> String {
@@ -84,7 +84,6 @@ mod test {
 
         fn display(&self, s: &mut StandardStream) -> io::Result<()> {
             s.set_color(ColorSpec::new().set_fg(Some(Color::Red)))?;
-            // writeln!(s, "{} {}", )?;
             s.reset()?;
             Ok(())
         }
@@ -93,15 +92,3 @@ mod test {
     #[test]
     fn foo() {}
 }
-
-/*
-print_color!(stdout, Color::Green, " {:18}", "Name");
-print_color!(stdout, Color::Green, " {:17}", "Type");
-print_color!(stdout, Color::Green, " {:17}", "Address");
-print_color!(stdout, Color::Green, " {:16}\n      ", "Offset");
-
-print_color!(stdout, Color::Green, " {:18}", "Size");
-print_color!(stdout, Color::Green, " {:17}", "EntSize");
-print_color!(stdout, Color::Green, " {:18}", "Flags  Link  Info");
-print_color!(stdout, Color::Green, " {:18}", "Align");
- */

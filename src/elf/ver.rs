@@ -1,7 +1,6 @@
-use std::io::{Read, Seek, SeekFrom};
+use std::io::{Read, Seek};
 
 use super::{
-    internal::get_data,
     shdr::{ElfShdr, SectionType},
     Elf32Half, Elf32Word, Elf64Half, Elf64Word, ElfHdr,
 };
@@ -43,31 +42,37 @@ pub struct ElfVerdef {
 
 impl ElfVerdef {
     pub fn read<R: Seek + Read>(
-        mut file: R,
-        header: &ElfHdr,
+        mut _file: R,
+        _header: &ElfHdr,
         shdrs: &[ElfShdr],
     ) -> Option<Vec<Self>> {
-        let verdef = match shdrs
+        let versym = match shdrs
             .iter()
             .find(|shdr| shdr.section_type().unwrap() == SectionType::VerSym)
         {
-            Some(verdef) => verdef,
+            Some(versym) => versym,
             _ => return None,
         };
 
-        let verdef = unsafe {
-            get_data::<_, Elf32Verdef, Elf64Verdef, ElfVerdef>(
-                &mut file,
-                header,
-                (verdef.size() / verdef.entsize()) as usize,
-                SeekFrom::Start(verdef.offset()),
-            )
-            .unwrap()
-        };
+        let _n = versym.size() / versym.entsize();
 
-        //println!("{:#?}", verdef);
+        // match header.class().unwrap() {
+        //     ElfClass::ElfClass64 => ReadBuf::file.read_buf,
+        //     _ => {}
+        // }
+        // let versym = unsafe {
+        //     get_data::<_, Elf32Half, Elf64Half, Elf64Half>(
+        //         &mut file,
+        //         header,
+        //         (versym.size() / versym.entsize()) as usize,
+        //         SeekFrom::Start(versym.offset()),
+        //     )
+        //     .unwrap()
+        // };
 
-        Some(verdef)
+        // Some(verdef)
+
+        todo!()
     }
 }
 
@@ -124,5 +129,16 @@ impl From<&Elf64Verdef> for ElfVerdef {
             aux: verdef.aux,
             next: verdef.next,
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::elf::core::FileData;
+
+    #[test]
+    fn foo() {
+        let _f = FileData::new("../ComputerSystems/bin/out").unwrap();
+        // ElfVerdef::read(&f.)
     }
 }

@@ -1,4 +1,5 @@
 #![feature(int_log)]
+#![feature(vec_into_raw_parts)]
 
 use clap::Parser;
 
@@ -274,6 +275,14 @@ fn main() {
             if should_pad {
                 println!();
             }
+
+            print_color!(
+                stdout,
+                Color::White,
+                "There are {} section headers, starting at offset 0x{:x}\n",
+                elf.header().e_shnum,
+                elf.header().e_shoff
+            );
             print_color!(stdout, Color::Yellow, "{}\n  ", "Section Headers");
 
             print_color!(stdout, Color::Blue, "{}", "[");

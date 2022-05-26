@@ -7,7 +7,7 @@ use std::{
     ptr, slice,
 };
 
-use num::{FromPrimitive, ToPrimitive};
+use num::FromPrimitive;
 use num_derive::FromPrimitive;
 
 use super::{
@@ -15,26 +15,23 @@ use super::{
     ElfHdr,
 };
 
-#[derive(Debug, Clone, Copy)]
-pub struct ElfShdr {
-    name: Elf64Word,
-    section_type: Elf64Word,
-    flags: Elf64Xword,
-    addr: Elf64Addr,
-    offset: Elf64Off,
-    size: Elf64Xword,
-    link: Elf64Word,
-    info: Elf64Word,
-    addralign: Elf64Xword,
-    entsize: Elf64Xword,
+macro_rules! trivial_convert {
+    ($self:expr => $field:ident, $variant32:ident, $variant64:ident) => {
+        match $self {
+            Self::$variant32(variant32) => variant32.$field.into(),
+            Self::$variant64(variant64) => variant64.$field.into(),
+        }
+    };
 }
 
-pub struct ElfShdrIter {
-    file: File,
-    remaining: usize,
-    is_elf64: bool,
+#[derive(Debug, Clone, Copy)]
+pub enum ElfShdr {
+    Elf32Shdr(Elf32Shdr),
+    Elf64Shdr(Elf64Shdr),
 }
+
 #[repr(C)]
+#[derive(Clone, Copy, Debug)]
 pub struct Elf32Shdr {
     name: Elf32Word,
     section_type: Elf32Word,
@@ -49,59 +46,76 @@ pub struct Elf32Shdr {
 }
 
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Elf64Shdr {
+    /// The name of this section in index of the string table
     pub name: Elf64Word,
+    /// Categorization of the section
     pub section_type: Elf64Word,
+    /// Attributes
     pub flags: Elf64Xword,
+    /// If the section is in the memory image, it will be the address of the first byte of this section; otherwise zero.
     pub addr: Elf64Addr,
+    /// Offset in bytes from the beginning of the file to the first byte of this section
     pub offset: Elf64Off,
+    /// This section's size
     pub size: Elf64Xword,
+    /// The section header table index link, interpretation depends on the section type
     pub link: Elf64Word,
+    /// Extra information dependent on the section type
     pub info: Elf64Word,
+    /// Alignment constraints
     pub addralign: Elf64Xword,
+    /// The size in bytes per each entry of this section, otherwise 0 if this section does not hold a table
+    /// of fixed-sized entries
     pub entsize: Elf64Xword,
+}
+
+pub struct ElfShdrIter {
+    file: File,
+    remaining: usize,
+    is_elf64: bool,
 }
 
 impl ElfShdr {
     pub fn name(&self) -> Elf64Word {
-        self.name
+        trivial_convert!(self => name, Elf32Shdr, Elf64Shdr)
     }
 
     pub fn section_type(&self) -> Option<SectionType> {
-        SectionType::from_u32(self.section_type)
+        SectionType::from_u32(trivial_convert!(self => section_type, Elf32Shdr, Elf64Shdr))
     }
 
     pub fn flags(&self) -> u64 {
-        self.flags
+        trivial_convert!(self => flags, Elf32Shdr, Elf64Shdr)
     }
 
     pub fn addr(&self) -> Elf64Addr {
-        self.addr
+        trivial_convert!(self => addr, Elf32Shdr, Elf64Shdr)
     }
 
     pub fn offset(&self) -> Elf64Off {
-        self.offset
+        trivial_convert!(self => offset, Elf32Shdr, Elf64Shdr)
     }
 
     pub fn size(&self) -> Elf64Xword {
-        self.size
+        trivial_convert!(self => size, Elf32Shdr, Elf64Shdr)
     }
 
     pub fn link(&self) -> Elf64Word {
-        self.link
+        trivial_convert!(self => link, Elf32Shdr, Elf64Shdr)
     }
 
     pub fn info(&self) -> Elf64Word {
-        self.info
+        trivial_convert!(self => info, Elf32Shdr, Elf64Shdr)
     }
 
     pub fn addralign(&self) -> Elf64Xword {
-        self.addralign
+        trivial_convert!(self => addralign, Elf32Shdr, Elf64Shdr)
     }
 
     pub fn entsize(&self) -> Elf64Xword {
-        self.entsize
+        trivial_convert!(self => entsize, Elf32Shdr, Elf64Shdr)
     }
 
     pub fn read_string_table<P: AsRef<Path>>(path: P) -> Result<Vec<u8>, io::Error> {
@@ -202,70 +216,13 @@ impl ElfShdr {
 
 impl From<Elf32Shdr> for ElfShdr {
     fn from(shdr: Elf32Shdr) -> Self {
-        Self {
-            name: shdr.name,
-            section_type: shdr.section_type,
-            flags: shdr.flags.to_u64().unwrap(),
-            addr: shdr.addr.to_u64().unwrap(),
-            offset: shdr.offset.to_u64().unwrap(),
-            size: shdr.size.to_u64().unwrap(),
-            link: shdr.link,
-            info: shdr.info,
-            addralign: shdr.addralign.to_u64().unwrap(),
-            entsize: shdr.entsize.to_u64().unwrap(),
-        }
+        Self::Elf32Shdr(shdr)
     }
 }
 
 impl From<Elf64Shdr> for ElfShdr {
     fn from(shdr: Elf64Shdr) -> Self {
-        Self {
-            name: shdr.name,
-            section_type: shdr.section_type,
-            flags: shdr.flags,
-            addr: shdr.addr,
-            offset: shdr.offset,
-            size: shdr.size,
-            link: shdr.link,
-            info: shdr.info,
-            addralign: shdr.addralign,
-            entsize: shdr.entsize,
-        }
-    }
-}
-
-impl From<ElfShdr> for Elf64Shdr {
-    fn from(shdr: ElfShdr) -> Self {
-        Self {
-            name: shdr.name,
-            section_type: shdr.section_type,
-            flags: shdr.flags,
-            addr: shdr.addr,
-            offset: shdr.offset,
-            size: shdr.size,
-            link: shdr.link,
-            info: shdr.info,
-            addralign: shdr.addralign,
-            entsize: shdr.entsize,
-        }
-    }
-}
-
-impl TryFrom<ElfShdr> for Elf32Shdr {
-    type Error = ();
-    fn try_from(value: ElfShdr) -> Result<Self, Self::Error> {
-        Ok(Self {
-            name: value.name,
-            section_type: value.section_type,
-            flags: value.flags.to_u32().ok_or(())?,
-            addr: value.addr.to_u32().ok_or(())?,
-            offset: value.offset.to_u32().ok_or(())?,
-            size: value.size.to_u32().ok_or(())?,
-            link: value.link,
-            info: value.info,
-            addralign: value.addralign.to_u32().ok_or(())?,
-            entsize: value.entsize.to_u32().ok_or(())?,
-        })
+        Self::Elf64Shdr(shdr)
     }
 }
 

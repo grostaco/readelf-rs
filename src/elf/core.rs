@@ -83,12 +83,7 @@ impl FileData {
             shdr.section_type()
                 .map_or(false, |stype| stype == SectionType::DynSym)
         }) {
-            let syms = ElfSym::read_symbols(
-                &mut self.file,
-                &self.header,
-                dyn_section,
-                //&self.section_headers,
-            )?;
+            let syms = ElfSym::read_symbols(&mut self.file, &self.header, dyn_section)?;
 
             return Some(syms);
         }
@@ -206,9 +201,8 @@ impl FileData {
                 SectionType::Rela | SectionType::Rel
             )
         }) {
-            let vers =
-                ElfVerdef::read(&mut self.file, &self.header, &self.section_headers).unwrap();
-            println!("{:#?}", vers);
+            // let vers = ElfSym::read_symbols(&mut self.file, &self.header, shdr).unwrap();
+            // println!("{:#?}", vers);
             print!("\nRelocation section ");
             print!("{}", self.string_lookup(shdr.name() as usize).unwrap());
 
@@ -250,26 +244,23 @@ impl FileData {
                     .unwrap()
                 };
 
+                println!("{:#?}", syms);
                 for sym in syms {
                     println!(
-                        "{}",
+                        "{} {}",
                         table
                             .iter()
                             .skip(sym.name() as usize)
                             .take_while(|&&p| p != 0)
                             .map(|i| *i as char)
                             .collect::<String>(),
+                        sym.info(),
                     );
                 }
             }
 
             if shdr.link() != 0 && shdr.link() < self.header.e_shnum.into() {
-                ElfSym::read_symbols(
-                    &mut self.file,
-                    &self.header,
-                    shdr,
-                    //&self.section_headers
-                );
+                ElfSym::read_symbols(&mut self.file, &self.header, shdr);
             }
         }
 
@@ -343,4 +334,8 @@ impl FileData {
             .take_while(|d| d.tag != DynamicTag::Null as u64)
             .collect()
     }
+
+    // pub fn versyms(&mut self) -> Vec<Elf64Half> {
+
+    // }
 }

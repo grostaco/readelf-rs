@@ -49,7 +49,6 @@ where
     match hdr.class().unwrap() {
         ElfClass::ElfClass32 => {
             let mut buf = Vec::<E32>::with_capacity(nmemb);
-
             let buf_ptr = buf.as_mut_ptr();
 
             file.read_exact(slice::from_raw_parts_mut(
@@ -65,7 +64,6 @@ where
         ElfClass::ElfClass64 => {
             let mut buf = Vec::<E64>::with_capacity(nmemb);
             let buf_ptr = buf.as_mut_ptr();
-
             file.read_exact(slice::from_raw_parts_mut(
                 mem::transmute(buf_ptr),
                 nmemb * mem::size_of::<E64>(),
